@@ -1,0 +1,158 @@
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+
+// Auth Pages
+import Login from './pages/auth/Login';
+import Register from './pages/auth/Register';
+
+// Layout & Common
+import DashboardLayout from './components/layouts/DashboardLayout';
+import Settings from './pages/vendor/Settings'; 
+
+// Public Feature Pages
+import ProductSearch from './components/ProductSearch';
+
+// Admin Pages
+import AdminDashboard from './pages/admin/AdminDashboard';
+import ManageVendors from './pages/admin/ManageVendors';
+import ManageUsers from './pages/admin/ManageUsers';
+import ManageProducts from './pages/admin/ManageProducts';
+import SystemSettings from './pages/admin/SystemSettings';
+
+// Vendor Pages
+import VendorDashboard from './pages/vendor/VendorDashboard';
+import VendorInventory from './pages/vendor/VendorInventory'; 
+import VendorOrders from './pages/vendor/VendorOrders';
+import VendorWallet from './pages/vendor/VendorWallet';
+import VendorReviews from './pages/vendor/VendorReviews'; 
+
+// Customer Pages
+import CustomerDashboard from './pages/customer/CustomerDashboard';
+
+// Messaging
+import Messages from './pages/vendor/Messages';
+
+const ProtectedRoute = ({ children, allowedRole }) => {
+  const token = localStorage.getItem('token');
+  const userString = localStorage.getItem('user');
+  
+  if (!token) return <Navigate to="/login" replace />;
+
+  if (userString && userString !== "undefined") {
+    try {
+      const user = JSON.parse(userString);
+      const userRole = user.role?.toLowerCase();
+
+      if (allowedRole && userRole !== allowedRole.toLowerCase()) {
+        return <Navigate to="/" replace />;
+      }
+      return children;
+    } catch (e) {
+      localStorage.clear();
+      return <Navigate to="/login" replace />;
+    }
+  }
+  return <Navigate to="/login" replace />;
+};
+
+const RoleRedirector = () => {
+  const userString = localStorage.getItem('user');
+  if (!userString || userString === "undefined") return <Navigate to="/login" replace />;
+  
+  try {
+    const user = JSON.parse(userString);
+    const role = user.role?.toLowerCase();
+    
+    if (role === 'admin')    return <Navigate to="/admin"    replace />;
+    if (role === 'vendor')   return <Navigate to="/vendor"   replace />;
+    if (role === 'customer') return <Navigate to="/customer" replace />;
+    
+    return <Navigate to="/settings" replace />;
+  } catch (e) {
+    return <Navigate to="/login" replace />;
+  }
+};
+
+function App() {
+  const userString = localStorage.getItem('user');
+  let user = null;
+  
+  try {
+    if (userString && userString !== "undefined") {
+      user = JSON.parse(userString);
+    }
+  } catch (err) {
+    console.error("Failed to parse user for routing", err);
+  }
+
+  return (
+    <Router>
+      <Routes>
+        {/* Public Routes */}
+        <Route path="/login"    element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        
+        {/* --- Public Trust & Proximity Product Search Interface --- */}
+        <Route path="/search" element={<ProductSearch />} />
+        
+        {/* Root Route Evaluation */}
+        <Route path="/" element={<ProtectedRoute><RoleRedirector /></ProtectedRoute>} />
+
+        {/* --- Admin Module --- */}
+        <Route path="/admin" element={<ProtectedRoute allowedRole="admin"><DashboardLayout><AdminDashboard /></DashboardLayout></ProtectedRoute>} />
+        <Route path="/admin/users" element={<ProtectedRoute allowedRole="admin"><DashboardLayout><ManageUsers /></DashboardLayout></ProtectedRoute>} />
+        <Route path="/admin/products" element={<ProtectedRoute allowedRole="admin"><DashboardLayout><ManageProducts /></DashboardLayout></ProtectedRoute>} />
+        <Route path="/admin/vendors" element={<ProtectedRoute allowedRole="admin"><DashboardLayout><ManageVendors /></DashboardLayout></ProtectedRoute>} />
+        <Route path="/admin/settings" element={<ProtectedRoute allowedRole="admin"><DashboardLayout><SystemSettings /></DashboardLayout></ProtectedRoute>} />
+
+        {/* --- Vendor Module --- */}
+        <Route path="/vendor" element={<ProtectedRoute allowedRole="vendor"><DashboardLayout><VendorDashboard /></DashboardLayout></ProtectedRoute>} />
+        <Route path="/vendor/products" element={<ProtectedRoute allowedRole="vendor"><DashboardLayout><VendorInventory /></DashboardLayout></ProtectedRoute>} />
+        <Route path="/vendor/orders" element={<ProtectedRoute allowedRole="vendor"><DashboardLayout><VendorOrders /></DashboardLayout></ProtectedRoute>} />
+        <Route path="/vendor/wallet" element={<ProtectedRoute allowedRole="vendor"><DashboardLayout><VendorWallet /></DashboardLayout></ProtectedRoute>} />
+
+        {/* --- Vendor Reviews Route --- */}
+        <Route 
+          path="/vendor/reviews" 
+          element={
+            <ProtectedRoute allowedRole="vendor">
+              <DashboardLayout>
+                <VendorReviews />
+              </DashboardLayout>
+            </ProtectedRoute>
+          } 
+        />
+
+        {/* --- Messaging --- */}
+        <Route 
+          path="/vendor/messages" 
+          element={
+            <ProtectedRoute allowedRole="vendor">
+              <DashboardLayout>
+                <Messages currentUser={user} />
+              </DashboardLayout>
+            </ProtectedRoute>
+          } 
+        />
+
+        {/* --- Customer Module --- */}
+        <Route
+          path="/customer"
+          element={
+            <ProtectedRoute allowedRole="customer">
+              <CustomerDashboard />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* --- Shared Settings (Universal) --- */}
+        <Route path="/settings" element={<ProtectedRoute><DashboardLayout><Settings /></DashboardLayout></ProtectedRoute>} />
+
+        {/* Catch-all Redirect */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </Router>
+  );
+}
+
+export default App;
