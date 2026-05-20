@@ -1,5 +1,6 @@
-import React from "react";
+import React from 'react';
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import API, {
   getUserProfile,
   updateProfile,
@@ -8,7 +9,15 @@ import API, {
   getConversations,
   reportReview,
   deleteReview,
-} from "../../services/api.js";
+} from "../../services/api"; 
+
+// ─── Notification API helpers (wired to your notificationController) ──────────
+const notifAPI = {
+  getAll:      (params={}) => API.get("/notifications", { params }),
+  markRead:    (id)        => API.put(`/notifications/${id}/read`),
+  markAllRead: ()          => API.put("/notifications/read-all"),
+  remove:      (id)        => API.delete(`/notifications/${id}`),
+};
 
 // ─── Design tokens (matches Admin dashboard) ──────────────────────────────────
 const C = {
@@ -178,6 +187,61 @@ const Empty = ({ icon="📭", text="Nothing here yet" }) => (
   </div>
 );
 
+// ─── Pagination ───────────────────────────────────────────────────────────────
+const ITEMS_PER_PAGE = 5;
+const PRODUCTS_PER_PAGE = 12;
+
+const Pagination = ({ page, totalItems, perPage=ITEMS_PER_PAGE, onChange }) => {
+  const totalPages = Math.ceil(totalItems / perPage);
+  if (totalPages <= 1) return null;
+  const start = (page - 1) * perPage + 1;
+  const end   = Math.min(page * perPage, totalItems);
+  return (
+    <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between",
+      marginTop:18, paddingTop:14, borderTop:`1px solid ${C.border}` }}>
+      <span style={{ fontSize:12, color:C.muted }}>
+        Showing <b style={{ color:C.text }}>{start}–{end}</b> of <b style={{ color:C.text }}>{totalItems}</b>
+      </span>
+      <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+        <button disabled={page<=1} onClick={()=>onChange(page-1)}
+          style={{ padding:"6px 14px", fontSize:12, fontWeight:600, borderRadius:7,
+            border:`1px solid ${C.border}`, background:page<=1?"#f3f5f1":"#fff",
+            color:page<=1?C.muted:C.text, cursor:page<=1?"not-allowed":"pointer",
+            transition:"all .15s" }}>
+          ← Prev
+        </button>
+        {/* Page number pills */}
+        {Array.from({ length: totalPages }, (_,i) => i+1)
+          .filter(n => n===1 || n===totalPages || Math.abs(n-page)<=1)
+          .reduce((acc, n, i, arr) => {
+            if (i>0 && n-arr[i-1]>1) acc.push("...");
+            acc.push(n);
+            return acc;
+          }, [])
+          .map((n, i) => n === "..." ? (
+            <span key={`dot${i}`} style={{ fontSize:12, color:C.muted, padding:"0 2px" }}>…</span>
+          ) : (
+            <button key={n} onClick={()=>onChange(n)}
+              style={{ width:32, height:32, borderRadius:7, fontSize:12, fontWeight:600,
+                border:`1px solid ${n===page?C.sidebar:C.border}`,
+                background:n===page?C.sidebar:"#fff",
+                color:n===page?C.gold:C.text, cursor:"pointer", transition:"all .15s" }}>
+              {n}
+            </button>
+          ))
+        }
+        <button disabled={page>=totalPages} onClick={()=>onChange(page+1)}
+          style={{ padding:"6px 14px", fontSize:12, fontWeight:600, borderRadius:7,
+            border:`1px solid ${C.border}`, background:page>=totalPages?"#f3f5f1":"#fff",
+            color:page>=totalPages?C.muted:C.text, cursor:page>=totalPages?"not-allowed":"pointer",
+            transition:"all .15s" }}>
+          Next →
+        </button>
+      </div>
+    </div>
+  );
+};
+
 // ─── Donut chart (pure SVG) ───────────────────────────────────────────────────
 const Donut = ({ slices=[], size=110, label="" }) => {
   const total = slices.reduce((a,s)=>a+s.value,0)||1;
@@ -250,6 +314,7 @@ const NAV = [
   { id:"shop",     label:"Shop",       icon:"🛍",  badge:null },
   { id:"orders",   label:"My Orders",  icon:"📦",  badge:"orders" },
   { id:"cart",     label:"Cart",       icon:"🛒",  badge:"cart" },
+  { id:"wishlist", label:"Wishlist",   icon:"❤️",  badge:"wishlist" },
   { id:"reviews",  label:"My Reviews", icon:"⭐",  badge:null },
   { id:"messages", label:"Messages",   icon:"💬",  badge:"messages" },
   { id:"profile",  label:"Profile",    icon:"👤",  badge:null },
@@ -260,6 +325,8 @@ const NAV = [
 // MAIN COMPONENT
 // ═════════════════════════════════════════════════════════════════════════════
 export default function CustomerDashboard() {
+  const navigate = useNavigate();
+
   // ── Global state ────────────────────────────────────────────────────────────
   const [section,   setSection]   = useState("home");
   const [collapsed, setCollapsed] = useState(false);
@@ -272,6 +339,126 @@ export default function CustomerDashboard() {
   const [convos,    setConvos]    = useState([]);
   const [loading,   setLoading]   = useState({});
   const [toastState,setToastState]= useState(null);
+
+  // ── Wishlist (persisted to localStorage) ────────────────────────────────────
+  const [wishlist, setWishlist] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("nc_wishlist") || "[]"); }
+    catch { return []; }
+  });
+  const toggleWishlist = (product) => {
+    setWishlist(prev => {
+      const exists = prev.find(p => p._id === product._id);
+      const next   = exists ? prev.filter(p => p._id !== product._id)
+                            : [...prev, { _id:product._id, name:product.name,
+                                price:product.price, image:product.image,
+                                category:product.category, averageRating:product.averageRating }];
+      localStorage.setItem("nc_wishlist", JSON.stringify(next));
+      toast[exists?"info":"success"](exists ? "Removed from wishlist" : "Added to wishlist ❤️");
+      return next;
+    });
+  };
+  const isWishlisted = (id) => wishlist.some(p => p._id === id);
+
+  // ── Confirm dialog ───────────────────────────────────────────────────────────
+  const [confirm, setConfirm] = useState(null); // { message, onConfirm }
+  const showConfirm = (message, onConfirm) => setConfirm({ message, onConfirm });
+
+  // ── Logout ───────────────────────────────────────────────────────────────────
+  const handleLogout = () => {
+    showConfirm("Are you sure you want to log out?", () => {
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      localStorage.removeItem("nc_wishlist");
+      navigate("/login");
+    });
+  };
+
+  // ── Notifications ─────────────────────────────────────────────────────────────
+  const [notifs,       setNotifs]       = useState([]);
+  const [unreadCount,  setUnreadCount]  = useState(0);
+  const [notifOpen,    setNotifOpen]    = useState(false);
+  const [notifLoading, setNotifLoading] = useState(false);
+  const [notifPage,    setNotifPage]    = useState(1);
+  const [notifTotal,   setNotifTotal]   = useState(0);
+  const [notifFilter,  setNotifFilter]  = useState("all"); // all | unread
+  const notifRef = useRef(null);
+
+  const NOTIF_PER_PAGE = 8;
+
+  const loadNotifs = useCallback(async (page=1, filter="all") => {
+    setNotifLoading(true);
+    try {
+      const params = { page, limit: NOTIF_PER_PAGE };
+      if (filter === "unread") params.read = false;
+      const { data } = await notifAPI.getAll(params);
+      const result   = data.data || data;
+      const list     = result.notifications || result;
+      const total    = result.pagination?.total || list.length;
+      setNotifs(page === 1 ? list : prev => [...prev, ...list]);
+      setNotifTotal(total);
+      setUnreadCount(list.filter(n => !n.read).length + (page > 1 ? unreadCount : 0));
+    } catch { /* silent — bell stays functional even if API is slow */ }
+    finally { setNotifLoading(false); }
+  }, []);
+
+  // Poll for new notifications every 60 seconds
+  useEffect(() => {
+    loadNotifs(1, notifFilter);
+    const interval = setInterval(() => loadNotifs(1, notifFilter), 60_000);
+    return () => clearInterval(interval);
+  }, [notifFilter]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handler = (e) => {
+      if (notifRef.current && !notifRef.current.contains(e.target)) {
+        setNotifOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const handleMarkRead = async (id) => {
+    try {
+      await notifAPI.markRead(id);
+      setNotifs(prev => prev.map(n => n._id === id ? { ...n, read: true } : n));
+      setUnreadCount(prev => Math.max(0, prev - 1));
+    } catch { toast.error("Failed to mark as read"); }
+  };
+
+  const handleMarkAllRead = async () => {
+    try {
+      await notifAPI.markAllRead();
+      setNotifs(prev => prev.map(n => ({ ...n, read: true })));
+      setUnreadCount(0);
+      toast.success("All notifications marked as read");
+    } catch { toast.error("Failed to mark all as read"); }
+  };
+
+  const handleDeleteNotif = async (id, e) => {
+    e.stopPropagation();
+    try {
+      await notifAPI.remove(id);
+      setNotifs(prev => prev.filter(n => n._id !== id));
+      setNotifTotal(prev => prev - 1);
+    } catch { toast.error("Failed to delete notification"); }
+  };
+
+  const handleLoadMore = () => {
+    const nextPage = notifPage + 1;
+    setNotifPage(nextPage);
+    loadNotifs(nextPage, notifFilter);
+  };
+
+  // Notif type → icon + accent colour
+  const NOTIF_STYLE = {
+    success: { icon:"✅", accent:C.green,  bg:"#eaf3de" },
+    warning: { icon:"⚠️", accent:"#854F0B", bg:"#faeeda" },
+    alert:   { icon:"🔒", accent:C.red,    bg:"#fcebeb" },
+    info:    { icon:"ℹ️",  accent:C.blue,   bg:"#e6f1fb" },
+  };
+  const notifStyle = (type) => NOTIF_STYLE[type] || NOTIF_STYLE.info;
 
   // Assign global toast setter
   _setToast = setToastState;
@@ -374,8 +561,25 @@ export default function CustomerDashboard() {
   const badges = {
     orders:   pendingCount || null,
     cart:     cartCount    || null,
+    wishlist: wishlist.length || null,
     messages: convos.filter(c=>c.unread).length || null,
   };
+
+  // ── Pagination state (one per section) ───────────────────────────────────────
+  const [ordersPage,   setOrdersPage]   = useState(1);
+  const [reviewsPage,  setReviewsPage]  = useState(1);
+  const [messagesPage, setMessagesPage] = useState(1);
+  const [wishlistPage, setWishlistPage] = useState(1);
+  const [shopPage,     setShopPage]     = useState(1);
+
+  // Reset pages when section changes
+  useEffect(() => {
+    setOrdersPage(1);
+    setReviewsPage(1);
+    setMessagesPage(1);
+    setWishlistPage(1);
+    setShopPage(1);
+  }, [section]);
 
   // ══════════════════════════════════════════════════════════════════════════
   // SECTION: HOME / OVERVIEW
@@ -501,6 +705,9 @@ export default function CustomerDashboard() {
   const [shopSearch,     setShopSearch]     = useState("");
   const [shopCategory,   setShopCategory]   = useState("");
   const [shopSort,       setShopSort]       = useState("newest");
+
+  // Reset shop page when search/filter changes
+  useEffect(()=>{ setShopPage(1); }, [shopSearch, shopCategory, shopSort]);
   const [addingToCart,   setAddingToCart]   = useState(null);
   const [selectedProduct,setSelectedProduct]= useState(null);
 
@@ -584,9 +791,12 @@ export default function CustomerDashboard() {
         ? <div style={{ padding:"60px 0", textAlign:"center" }}><Spinner size={28}/></div>
         : filteredProducts.length===0
         ? <Empty icon="🛍" text="No products found"/>
-        : (
-          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))", gap:14 }}>
-            {filteredProducts.map(p=>(
+        : (() => {
+            const pageItems = filteredProducts.slice((shopPage-1)*PRODUCTS_PER_PAGE, shopPage*PRODUCTS_PER_PAGE);
+            return (
+              <>
+                <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))", gap:14 }}>
+                  {pageItems.map(p=>(
               <Card key={p._id} onClick={()=>setSelectedProduct(p)}
                 style={{ padding:0, overflow:"hidden", cursor:"pointer" }}>
                 {/* Product image */}
@@ -597,6 +807,15 @@ export default function CustomerDashboard() {
                     ? <img src={p.image} alt={p.name}
                         style={{ width:"100%", height:"100%", objectFit:"cover" }}/>
                     : "📦"}
+                  {/* Wishlist heart */}
+                  <button onClick={(e)=>{ e.stopPropagation(); toggleWishlist(p); }}
+                    style={{ position:"absolute", top:8, left:8, width:30, height:30,
+                      borderRadius:"50%", background:"rgba(255,255,255,.9)", border:"none",
+                      cursor:"pointer", display:"flex", alignItems:"center",
+                      justifyContent:"center", fontSize:15,
+                      boxShadow:"0 1px 4px rgba(0,0,0,.15)" }}>
+                    {isWishlisted(p._id) ? "❤️" : "🤍"}
+                  </button>
                   {p.stock<5 && p.stock>0 && (
                     <span style={{ position:"absolute", top:8, right:8, background:C.red,
                       color:"#fff", fontSize:10, fontWeight:600, padding:"2px 7px",
@@ -632,8 +851,12 @@ export default function CustomerDashboard() {
                 </div>
               </Card>
             ))}
-          </div>
-        )
+                </div>
+                <Pagination page={shopPage} totalItems={filteredProducts.length}
+                  perPage={PRODUCTS_PER_PAGE} onChange={p=>{ setShopPage(p); window.scrollTo(0,0); }}/>
+              </>
+            );
+          })()
       }
 
       {/* Product detail modal */}
@@ -647,6 +870,9 @@ export default function CustomerDashboard() {
   // ══════════════════════════════════════════════════════════════════════════
   const [orderFilter, setOrderFilter]   = useState("all");
   const [orderSearch, setOrderSearch]   = useState("");
+
+  // Reset page when filter/search changes
+  useEffect(()=>{ setOrdersPage(1); }, [orderFilter, orderSearch]);
   const [selectedOrder,setSelectedOrder]= useState(null);
 
   const filteredOrders = orders.filter(o=>{
@@ -692,7 +918,11 @@ export default function CustomerDashboard() {
           ? <div style={{ padding:"40px", textAlign:"center" }}><Spinner size={24}/></div>
           : filteredOrders.length===0
           ? <Empty icon="📦" text="No orders found"/>
-          : filteredOrders.map((o,i)=>(
+          : (() => {
+              const pageItems = filteredOrders.slice((ordersPage-1)*ITEMS_PER_PAGE, ordersPage*ITEMS_PER_PAGE);
+              return (
+                <>
+                  {pageItems.map((o,i)=>(
             <div key={o._id}
               onClick={()=>setSelectedOrder(selectedOrder?._id===o._id?null:o)}
               style={{ border:`1px solid ${C.border}`, borderRadius:10, marginBottom:10,
@@ -766,7 +996,12 @@ export default function CustomerDashboard() {
                 </div>
               )}
             </div>
-          ))
+          ))}
+                  <Pagination page={ordersPage} totalItems={filteredOrders.length}
+                    onChange={p=>{ setOrdersPage(p); window.scrollTo(0,0); }}/>
+                </>
+              );
+            })()
         }
       </Panel>
     </div>
@@ -1057,7 +1292,7 @@ export default function CustomerDashboard() {
         <div style={{ position:"relative", marginBottom:14 }}>
           <span style={{ position:"absolute", left:10, top:"50%", transform:"translateY(-50%)",
             color:C.muted, fontSize:13 }}>🔍</span>
-          <input value={reviewSearch} onChange={e=>setReviewSearch(e.target.value)}
+          <input value={reviewSearch} onChange={e=>{ setReviewSearch(e.target.value); setReviewsPage(1); }}
             placeholder="Search reviews…"
             style={{ width:"100%", padding:"8px 10px 8px 30px", border:`1px solid ${C.border}`,
               borderRadius:8, fontSize:12, outline:"none", boxSizing:"border-box" }}/>
@@ -1067,30 +1302,39 @@ export default function CustomerDashboard() {
           ? <div style={{ textAlign:"center", padding:30 }}><Spinner size={22}/></div>
           : filtered_reviews.length===0
           ? <Empty icon="⭐" text="No reviews yet — buy something and share your thoughts!"/>
-          : filtered_reviews.map((r,i)=>(
-            <div key={r._id} style={{ padding:"14px 0",
-              borderBottom: i<filtered_reviews.length-1?`1px solid ${C.border}`:"none" }}>
-              <div style={{ display:"flex", alignItems:"flex-start", gap:12 }}>
-                <div style={{ flex:1 }}>
-                  <div style={{ fontWeight:500, fontSize:13 }}>
-                    {r.product?.name || "Product #"+r.product?.toString()?.slice(-6)}
-                  </div>
-                  <div style={{ display:"flex", alignItems:"center", gap:8, margin:"4px 0" }}>
-                    <Stars rating={r.rating} size={13}/>
-                    <span style={{ fontSize:11, color:C.muted }}>{ago(r.createdAt)}</span>
-                    {r.reported && <span style={{ fontSize:10, color:C.red, fontWeight:600 }}>⚠ Reported</span>}
-                  </div>
-                  <p style={{ fontSize:12.5, color:C.text, margin:0, lineHeight:1.6 }}>{r.comment}</p>
-                </div>
-                <button onClick={()=>handleDeleteReview(r._id)}
-                  style={{ background:`${C.red}08`, border:`1px solid ${C.red}30`, color:C.red,
-                    cursor:"pointer", fontSize:11, fontWeight:600, padding:"4px 8px",
-                    borderRadius:6 }}>
-                  Delete
-                </button>
-              </div>
-            </div>
-          ))
+          : (() => {
+              const pageItems = filtered_reviews.slice((reviewsPage-1)*ITEMS_PER_PAGE, reviewsPage*ITEMS_PER_PAGE);
+              return (
+                <>
+                  {pageItems.map((r,i)=>(
+                    <div key={r._id} style={{ padding:"14px 0",
+                      borderBottom: i<pageItems.length-1?`1px solid ${C.border}`:"none" }}>
+                      <div style={{ display:"flex", alignItems:"flex-start", gap:12 }}>
+                        <div style={{ flex:1 }}>
+                          <div style={{ fontWeight:500, fontSize:13 }}>
+                            {r.product?.name || "Product #"+r.product?.toString()?.slice(-6)}
+                          </div>
+                          <div style={{ display:"flex", alignItems:"center", gap:8, margin:"4px 0" }}>
+                            <Stars rating={r.rating} size={13}/>
+                            <span style={{ fontSize:11, color:C.muted }}>{ago(r.createdAt)}</span>
+                            {r.reported && <span style={{ fontSize:10, color:C.red, fontWeight:600 }}>⚠ Reported</span>}
+                          </div>
+                          <p style={{ fontSize:12.5, color:C.text, margin:0, lineHeight:1.6 }}>{r.comment}</p>
+                        </div>
+                        <button onClick={()=>handleDeleteReview(r._id)}
+                          style={{ background:`${C.red}08`, border:`1px solid ${C.red}30`, color:C.red,
+                            cursor:"pointer", fontSize:11, fontWeight:600, padding:"4px 8px",
+                            borderRadius:6 }}>
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                  <Pagination page={reviewsPage} totalItems={filtered_reviews.length}
+                    onChange={p=>{ setReviewsPage(p); window.scrollTo(0,0); }}/>
+                </>
+              );
+            })()
         }
       </Panel>
     </div>
@@ -1105,24 +1349,33 @@ export default function CustomerDashboard() {
         ? <div style={{ textAlign:"center", padding:40 }}><Spinner size={22}/></div>
         : convos.length===0
         ? <Empty icon="💬" text="No conversations yet"/>
-        : convos.map((c,i)=>(
-          <div key={c._id||i} style={{ display:"flex", alignItems:"center", gap:12,
-            padding:"12px 14px", borderRadius:10, marginBottom:6,
-            background:"#f9fafb", border:`1px solid ${C.border}`,
-            cursor:"pointer", transition:"all .15s" }}
-            onMouseEnter={e=>{ e.currentTarget.style.background=C.sidebar; e.currentTarget.style.color="#fff"; }}
-            onMouseLeave={e=>{ e.currentTarget.style.background="#f9fafb"; e.currentTarget.style.color=C.text; }}>
-            <Avatar name={c.userDetails?.name||"?"} size={40} bg={avatarColor(c.userDetails?.name||"")}/>
-            <div style={{ flex:1 }}>
-              <div style={{ fontWeight:500, fontSize:13 }}>{c.userDetails?.name||"Unknown"}</div>
-              <div style={{ fontSize:11, color:C.muted, marginTop:2, overflow:"hidden",
-                textOverflow:"ellipsis", whiteSpace:"nowrap", maxWidth:260 }}>
-                {c.lastMessage||"No messages"}
-              </div>
-            </div>
-            <div style={{ fontSize:11, color:C.muted }}>{ago(c.lastTimestamp)}</div>
-          </div>
-        ))
+        : (() => {
+            const pageItems = convos.slice((messagesPage-1)*ITEMS_PER_PAGE, messagesPage*ITEMS_PER_PAGE);
+            return (
+              <>
+                {pageItems.map((c,i)=>(
+                  <div key={c._id||i} style={{ display:"flex", alignItems:"center", gap:12,
+                    padding:"12px 14px", borderRadius:10, marginBottom:6,
+                    background:"#f9fafb", border:`1px solid ${C.border}`,
+                    cursor:"pointer", transition:"all .15s" }}
+                    onMouseEnter={e=>{ e.currentTarget.style.background=C.sidebar; e.currentTarget.style.color="#fff"; }}
+                    onMouseLeave={e=>{ e.currentTarget.style.background="#f9fafb"; e.currentTarget.style.color=C.text; }}>
+                    <Avatar name={c.userDetails?.name||"?"} size={40} bg={avatarColor(c.userDetails?.name||"")}/>
+                    <div style={{ flex:1 }}>
+                      <div style={{ fontWeight:500, fontSize:13 }}>{c.userDetails?.name||"Unknown"}</div>
+                      <div style={{ fontSize:11, color:C.muted, marginTop:2, overflow:"hidden",
+                        textOverflow:"ellipsis", whiteSpace:"nowrap", maxWidth:260 }}>
+                        {c.lastMessage||"No messages"}
+                      </div>
+                    </div>
+                    <div style={{ fontSize:11, color:C.muted }}>{ago(c.lastTimestamp)}</div>
+                  </div>
+                ))}
+                <Pagination page={messagesPage} totalItems={convos.length}
+                  onChange={p=>{ setMessagesPage(p); window.scrollTo(0,0); }}/>
+              </>
+            );
+          })()
       }
     </Panel>
   );
@@ -1321,17 +1574,78 @@ export default function CustomerDashboard() {
               {profile?.isVerified?"✓ Verified":"⚠ Not Verified"}
             </span>
           </div>
+          <div style={{ marginTop:4 }}>
+            <Btn variant="danger" onClick={handleLogout}>🚪 Log Out of Account</Btn>
+          </div>
         </div>
       </Panel>
     </div>
   );
 
   // ── Section map ────────────────────────────────────────────────────────────
+  const renderWishlist = () => (
+    <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
+      <Panel title={`Wishlist (${wishlist.length})`} subtitle="Products you've saved for later">
+        {wishlist.length === 0 ? (
+          <div style={{ textAlign:"center", padding:"50px 20px" }}>
+            <div style={{ fontSize:48, marginBottom:12 }}>❤️</div>
+            <div style={{ fontSize:16, fontWeight:600, color:C.text, marginBottom:8 }}>Your wishlist is empty</div>
+            <div style={{ fontSize:13, color:C.muted, marginBottom:20 }}>Browse products and tap ❤️ to save them here</div>
+            <Btn onClick={()=>setSection("shop")}>Browse Shop</Btn>
+          </div>
+        ) : (() => {
+            const pageItems = wishlist.slice((wishlistPage-1)*PRODUCTS_PER_PAGE, wishlistPage*PRODUCTS_PER_PAGE);
+            return (
+              <>
+                <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))", gap:14 }}>
+                  {pageItems.map(p => (
+                    <Card key={p._id} style={{ padding:0, overflow:"hidden" }}>
+                      <div style={{ height:130, background:"linear-gradient(135deg,#e8f0ea,#d4e5d8)",
+                        display:"flex", alignItems:"center", justifyContent:"center",
+                        fontSize:42, position:"relative" }}>
+                        {p.image
+                          ? <img src={p.image} alt={p.name} style={{ width:"100%", height:"100%", objectFit:"cover" }}/>
+                          : "📦"}
+                        <button onClick={()=>toggleWishlist(p)}
+                          style={{ position:"absolute", top:8, right:8, background:"rgba(255,255,255,.9)",
+                            border:"none", borderRadius:"50%", width:28, height:28, cursor:"pointer",
+                            display:"flex", alignItems:"center", justifyContent:"center", fontSize:14 }}>
+                          ❤️
+                        </button>
+                      </div>
+                      <div style={{ padding:"12px 12px 10px" }}>
+                        <div style={{ fontWeight:600, fontSize:13, overflow:"hidden",
+                          textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{p.name}</div>
+                        <div style={{ fontSize:11, color:C.muted, marginBottom:8 }}>{p.category?.name || "Product"}</div>
+                        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+                          <span style={{ fontSize:15, fontWeight:700, color:C.green }}>${p.price}</span>
+                          <button onClick={()=>handleAddToCart(p._id)}
+                            style={{ background:C.sidebar, color:C.gold, border:"none",
+                              padding:"5px 10px", borderRadius:6, fontSize:11, fontWeight:600, cursor:"pointer" }}>
+                            + Cart
+                          </button>
+                        </div>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+                <Pagination page={wishlistPage} totalItems={wishlist.length}
+                  perPage={PRODUCTS_PER_PAGE}
+                  onChange={p=>{ setWishlistPage(p); window.scrollTo(0,0); }}/>
+              </>
+            );
+          })()
+        }
+      </Panel>
+    </div>
+  );
+
   const sectionMap = {
     home:     renderHome,
     shop:     renderShop,
     orders:   renderOrders,
     cart:     renderCart,
+    wishlist: renderWishlist,
     reviews:  renderReviews,
     messages: renderMessages,
     profile:  renderProfile,
@@ -1344,7 +1658,8 @@ export default function CustomerDashboard() {
   return (
     <>
       <style>{`
-        @keyframes spin { to { transform:rotate(360deg); } }
+        @keyframes spin  { to { transform:rotate(360deg); } }
+        @keyframes pulse { 0%,100% { transform:scale(1); } 50% { transform:scale(1.2); } }
         * { box-sizing:border-box; }
         body { margin:0; font-family:'DM Sans',system-ui,sans-serif; }
         ::-webkit-scrollbar { width:5px; height:5px; }
@@ -1417,22 +1732,37 @@ export default function CustomerDashboard() {
             })}
           </nav>
 
-          {/* User info */}
-          <div style={{ padding:collapsed?"10px 0":"12px 14px", borderTop:"1px solid rgba(255,255,255,.08)",
-            display:"flex", alignItems:"center", gap:10,
-            justifyContent:collapsed?"center":"flex-start" }}>
-            <Avatar name={profile?.name||"?"} size={32} bg={C.gold} color={C.sidebar}/>
-            {!collapsed && (
-              <div style={{ overflow:"hidden" }}>
-                <div style={{ fontSize:12, fontWeight:600, color:"#fff", whiteSpace:"nowrap",
-                  overflow:"hidden", textOverflow:"ellipsis", maxWidth:130 }}>
-                  {profile?.name||"Customer"}
+          {/* User info + Logout */}
+          <div style={{ borderTop:"1px solid rgba(255,255,255,.08)" }}>
+            <div style={{ padding:collapsed?"10px 0":"12px 14px",
+              display:"flex", alignItems:"center", gap:10,
+              justifyContent:collapsed?"center":"flex-start" }}>
+              <Avatar name={profile?.name||"?"} size={32} bg={C.gold} color={C.sidebar}/>
+              {!collapsed && (
+                <div style={{ overflow:"hidden", flex:1 }}>
+                  <div style={{ fontSize:12, fontWeight:600, color:"#fff", whiteSpace:"nowrap",
+                    overflow:"hidden", textOverflow:"ellipsis", maxWidth:110 }}>
+                    {profile?.name||"Customer"}
+                  </div>
+                  <div style={{ fontSize:10, color:"rgba(255,255,255,.4)", whiteSpace:"nowrap" }}>
+                    {profile?.reputation?.rank||"Starter"}
+                  </div>
                 </div>
-                <div style={{ fontSize:10, color:"rgba(255,255,255,.4)", whiteSpace:"nowrap" }}>
-                  {profile?.reputation?.rank||"Starter"}
-                </div>
-              </div>
-            )}
+              )}
+            </div>
+            {/* Logout button */}
+            <div onClick={handleLogout}
+              title={collapsed?"Log Out":""}
+              style={{ display:"flex", alignItems:"center", gap:collapsed?0:10,
+                padding:collapsed?"11px 0":"9px 14px 14px",
+                justifyContent:collapsed?"center":"flex-start",
+                cursor:"pointer", fontSize:13, color:"rgba(255,80,60,.75)",
+                transition:"color .15s" }}
+              onMouseEnter={e=>e.currentTarget.style.color="#ff5040"}
+              onMouseLeave={e=>e.currentTarget.style.color="rgba(255,80,60,.75)"}>
+              <span style={{ fontSize:16, flexShrink:0 }}>🚪</span>
+              {!collapsed && <span style={{ whiteSpace:"nowrap", fontWeight:500 }}>Log Out</span>}
+            </div>
           </div>
         </aside>
 
@@ -1448,7 +1778,8 @@ export default function CustomerDashboard() {
               <span style={{ fontSize:11 }}>›</span>
               <span style={{ color:C.text, fontWeight:500, textTransform:"capitalize" }}>{section}</span>
             </div>
-            <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+            <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+
               {/* Cart icon */}
               <div onClick={()=>setSection("cart")}
                 style={{ position:"relative", cursor:"pointer", width:36, height:36,
@@ -1461,12 +1792,173 @@ export default function CustomerDashboard() {
                     fontWeight:700 }}>{cartCount}</span>
                 )}
               </div>
-              {/* Greeting */}
+
+              {/* ── Notification Bell ─────────────────────────────────── */}
+              <div ref={notifRef} style={{ position:"relative" }}>
+                {/* Bell button */}
+                <button onClick={()=>{ setNotifOpen(p=>!p); if(!notifOpen) loadNotifs(1,notifFilter); }}
+                  style={{ position:"relative", width:36, height:36, borderRadius:8,
+                    border:`1px solid ${C.border}`, background:"#fff", cursor:"pointer",
+                    display:"flex", alignItems:"center", justifyContent:"center",
+                    fontSize:17, transition:"background .15s" }}
+                  onMouseEnter={e=>e.currentTarget.style.background="#f3f5f1"}
+                  onMouseLeave={e=>e.currentTarget.style.background="#fff"}>
+                  🔔
+                  {unreadCount>0 && (
+                    <span style={{ position:"absolute", top:-5, right:-5, background:C.red,
+                      color:"#fff", fontSize:9, fontWeight:700, minWidth:16, height:16,
+                      borderRadius:20, display:"flex", alignItems:"center",
+                      justifyContent:"center", padding:"0 4px",
+                      border:"2px solid #fff", animation: "pulse 2s infinite" }}>
+                      {unreadCount > 99 ? "99+" : unreadCount}
+                    </span>
+                  )}
+                </button>
+
+                {/* Dropdown panel */}
+                {notifOpen && (
+                  <div style={{ position:"absolute", top:"calc(100% + 8px)", right:0,
+                    width:360, maxHeight:520, background:"#fff",
+                    border:`1px solid ${C.border}`, borderRadius:12,
+                    boxShadow:"0 8px 32px rgba(0,0,0,.12)", zIndex:200,
+                    display:"flex", flexDirection:"column", overflow:"hidden" }}>
+
+                    {/* Header */}
+                    <div style={{ padding:"14px 16px 10px", borderBottom:`1px solid ${C.border}`,
+                      display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+                      <div>
+                        <div style={{ fontWeight:700, fontSize:14, color:C.text }}>Notifications</div>
+                        <div style={{ fontSize:11, color:C.muted, marginTop:1 }}>
+                          {unreadCount > 0 ? `${unreadCount} unread` : "All caught up 🎉"}
+                        </div>
+                      </div>
+                      <div style={{ display:"flex", gap:6, alignItems:"center" }}>
+                        {/* Filter toggle */}
+                        {["all","unread"].map(f=>(
+                          <button key={f} onClick={()=>{ setNotifFilter(f); setNotifPage(1); loadNotifs(1,f); }}
+                            style={{ padding:"4px 10px", borderRadius:20, fontSize:11, fontWeight:600,
+                              cursor:"pointer", border:"none",
+                              background: notifFilter===f ? C.sidebar : "#f3f5f1",
+                              color:       notifFilter===f ? C.gold    : C.muted,
+                              textTransform:"capitalize" }}>
+                            {f}
+                          </button>
+                        ))}
+                        {/* Mark all read */}
+                        {unreadCount>0 && (
+                          <button onClick={handleMarkAllRead}
+                            style={{ padding:"4px 10px", borderRadius:20, fontSize:11, fontWeight:600,
+                              cursor:"pointer", border:`1px solid ${C.green}40`,
+                              background:`${C.green}10`, color:C.green }}>
+                            ✓ All
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* List */}
+                    <div style={{ overflowY:"auto", flex:1 }}>
+                      {notifLoading && notifs.length===0 ? (
+                        <div style={{ padding:"30px 0", textAlign:"center" }}><Spinner size={20}/></div>
+                      ) : notifs.length===0 ? (
+                        <div style={{ padding:"40px 20px", textAlign:"center" }}>
+                          <div style={{ fontSize:36, marginBottom:8 }}>🔕</div>
+                          <div style={{ fontSize:13, color:C.muted }}>No notifications yet</div>
+                        </div>
+                      ) : (
+                        notifs.map(n => {
+                          const ns = notifStyle(n.type);
+                          return (
+                            <div key={n._id}
+                              onClick={()=>{ if(!n.read) handleMarkRead(n._id); }}
+                              style={{ display:"flex", gap:12, padding:"12px 16px",
+                                borderBottom:`1px solid ${C.border}`,
+                                background: n.read ? "#fff" : `${ns.bg}60`,
+                                cursor: n.read ? "default" : "pointer",
+                                transition:"background .15s",
+                                position:"relative" }}
+                              onMouseEnter={e=>{ e.currentTarget.style.background="#f8faf8"; }}
+                              onMouseLeave={e=>{ e.currentTarget.style.background = n.read ? "#fff" : `${ns.bg}60`; }}>
+                              {/* Icon */}
+                              <div style={{ width:36, height:36, borderRadius:10, background:ns.bg,
+                                display:"flex", alignItems:"center", justifyContent:"center",
+                                fontSize:16, flexShrink:0 }}>
+                                {ns.icon}
+                              </div>
+                              {/* Content */}
+                              <div style={{ flex:1, minWidth:0 }}>
+                                <div style={{ display:"flex", alignItems:"flex-start",
+                                  justifyContent:"space-between", gap:6 }}>
+                                  <div style={{ fontWeight: n.read ? 500 : 700, fontSize:13,
+                                    color:C.text, lineHeight:1.3 }}>{n.title}</div>
+                                  {!n.read && (
+                                    <span style={{ width:8, height:8, borderRadius:"50%",
+                                      background:ns.accent, flexShrink:0, marginTop:3 }}/>
+                                  )}
+                                </div>
+                                <div style={{ fontSize:12, color:C.muted, marginTop:3,
+                                  lineHeight:1.5, wordBreak:"break-word" }}>{n.message}</div>
+                                <div style={{ fontSize:10, color:C.muted, marginTop:5,
+                                  display:"flex", alignItems:"center", gap:6 }}>
+                                  <span style={{ color:ns.accent, fontWeight:600,
+                                    textTransform:"capitalize" }}>{n.type}</span>
+                                  <span>·</span>
+                                  <span>{ago(n.createdAt)}</span>
+                                </div>
+                              </div>
+                              {/* Delete */}
+                              <button onClick={(e)=>handleDeleteNotif(n._id,e)}
+                                style={{ position:"absolute", top:10, right:12,
+                                  background:"none", border:"none", cursor:"pointer",
+                                  color:"#ccc", fontSize:14, fontWeight:700, lineHeight:1,
+                                  opacity:0, transition:"opacity .15s" }}
+                                onMouseEnter={e=>{ e.currentTarget.style.opacity="1"; e.currentTarget.style.color=C.red; }}
+                                onMouseLeave={e=>{ e.currentTarget.style.opacity="0"; }}>
+                                ×
+                              </button>
+                            </div>
+                          );
+                        })
+                      )}
+
+                      {/* Load more */}
+                      {notifs.length < notifTotal && (
+                        <div style={{ padding:"10px", textAlign:"center" }}>
+                          <button onClick={handleLoadMore} disabled={notifLoading}
+                            style={{ fontSize:12, fontWeight:600, color:C.green, background:"none",
+                              border:`1px solid ${C.green}40`, borderRadius:8,
+                              padding:"7px 20px", cursor:"pointer" }}>
+                            {notifLoading ? <Spinner size={12}/> : "Load more"}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Footer */}
+                    <div style={{ padding:"10px 16px", borderTop:`1px solid ${C.border}`,
+                      textAlign:"center" }}>
+                      <span style={{ fontSize:11, color:C.muted }}>
+                        Showing {notifs.length} of {notifTotal} notifications
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+              {/* ── End Notification Bell ─────────────────────────── */}
+
+              {/* Greeting + logout */}
               <div style={{ display:"flex", alignItems:"center", gap:8 }}>
                 <Avatar name={profile?.name||"?"} size={32} bg={C.gold} color={C.sidebar}/>
                 <span style={{ fontSize:13, fontWeight:500, color:C.text }}>
                   {profile?.name?.split(" ")[0]||"Customer"}
                 </span>
+                <button onClick={handleLogout}
+                  style={{ marginLeft:4, padding:"6px 12px", borderRadius:8, fontSize:12,
+                    fontWeight:600, cursor:"pointer", border:`1px solid ${C.red}30`,
+                    background:`${C.red}08`, color:C.red, display:"flex",
+                    alignItems:"center", gap:5 }}>
+                  🚪 Logout
+                </button>
               </div>
             </div>
           </div>
@@ -1477,6 +1969,35 @@ export default function CustomerDashboard() {
           </div>
         </div>
       </div>
+
+      {/* ── CONFIRM DIALOG ───────────────────────────────────────────────── */}
+      {confirm && (
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.45)", zIndex:9998,
+          display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}>
+          <div style={{ background:"#fff", borderRadius:14, padding:"28px 32px", maxWidth:380,
+            width:"100%", boxShadow:"0 8px 40px rgba(0,0,0,.18)", textAlign:"center" }}>
+            <div style={{ fontSize:36, marginBottom:12 }}>🚪</div>
+            <div style={{ fontSize:16, fontWeight:700, color:C.text, marginBottom:8 }}>
+              {confirm.message}
+            </div>
+            <div style={{ fontSize:13, color:C.muted, marginBottom:24 }}>
+              This action cannot be undone.
+            </div>
+            <div style={{ display:"flex", gap:10, justifyContent:"center" }}>
+              <button onClick={()=>setConfirm(null)}
+                style={{ flex:1, padding:"10px 0", borderRadius:9, fontSize:13, fontWeight:600,
+                  border:`1px solid ${C.border}`, background:"#fff", color:C.text, cursor:"pointer" }}>
+                Cancel
+              </button>
+              <button onClick={()=>{ confirm.onConfirm(); setConfirm(null); }}
+                style={{ flex:1, padding:"10px 0", borderRadius:9, fontSize:13, fontWeight:600,
+                  border:"none", background:C.red, color:"#fff", cursor:"pointer" }}>
+                Yes, Log Out
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── TOAST ──────────────────────────────────────────────────────────── */}
       {toastState && (
