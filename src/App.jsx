@@ -29,6 +29,10 @@ import VendorReviews from './pages/vendor/VendorReviews';
 // Customer Pages
 import CustomerDashboard from './pages/customer/CustomerDashboard';
 
+// Payment Pages
+import TelebirrPayment from './pages/payment/TelebirrPayment';
+import PaymentSuccess  from './pages/payment/PaymentSuccess';
+
 // Messaging
 import Messages from './pages/vendor/Messages';
 
@@ -99,51 +103,46 @@ function App() {
         <Route path="/" element={<ProtectedRoute><RoleRedirector /></ProtectedRoute>} />
 
         {/* --- Admin Module --- */}
-        <Route path="/admin" element={<ProtectedRoute allowedRole="admin"><DashboardLayout><AdminDashboard /></DashboardLayout></ProtectedRoute>} />
-        <Route path="/admin/users" element={<ProtectedRoute allowedRole="admin"><DashboardLayout><ManageUsers /></DashboardLayout></ProtectedRoute>} />
-        <Route path="/admin/products" element={<ProtectedRoute allowedRole="admin"><DashboardLayout><ManageProducts /></DashboardLayout></ProtectedRoute>} />
-        <Route path="/admin/vendors" element={<ProtectedRoute allowedRole="admin"><DashboardLayout><ManageVendors /></DashboardLayout></ProtectedRoute>} />
-        <Route path="/admin/settings" element={<ProtectedRoute allowedRole="admin"><DashboardLayout><SystemSettings /></DashboardLayout></ProtectedRoute>} />
+        <Route path="/admin" element={
+          <ProtectedRoute allowedRole="admin">
+            <AdminDashboard />
+          </ProtectedRoute>
+        } />
+        <Route path="/admin/users"     element={<ProtectedRoute allowedRole="admin"><DashboardLayout><ManageUsers /></DashboardLayout></ProtectedRoute>} />
+        <Route path="/admin/products"  element={<ProtectedRoute allowedRole="admin"><DashboardLayout><ManageProducts /></DashboardLayout></ProtectedRoute>} />
+        <Route path="/admin/vendors"   element={<ProtectedRoute allowedRole="admin"><DashboardLayout><ManageVendors /></DashboardLayout></ProtectedRoute>} />
+        <Route path="/admin/settings"  element={<ProtectedRoute allowedRole="admin"><DashboardLayout><SystemSettings /></DashboardLayout></ProtectedRoute>} />
 
         {/* --- Vendor Module --- */}
-        <Route path="/vendor" element={<ProtectedRoute allowedRole="vendor"><DashboardLayout><VendorDashboard /></DashboardLayout></ProtectedRoute>} />
+        <Route path="/vendor"          element={<ProtectedRoute allowedRole="vendor"><DashboardLayout><VendorDashboard /></DashboardLayout></ProtectedRoute>} />
         <Route path="/vendor/products" element={<ProtectedRoute allowedRole="vendor"><DashboardLayout><VendorInventory /></DashboardLayout></ProtectedRoute>} />
-        <Route path="/vendor/orders" element={<ProtectedRoute allowedRole="vendor"><DashboardLayout><VendorOrders /></DashboardLayout></ProtectedRoute>} />
-        <Route path="/vendor/wallet" element={<ProtectedRoute allowedRole="vendor"><DashboardLayout><VendorWallet /></DashboardLayout></ProtectedRoute>} />
-
-        {/* --- Vendor Reviews Route --- */}
-        <Route 
-          path="/vendor/reviews" 
-          element={
-            <ProtectedRoute allowedRole="vendor">
-              <DashboardLayout>
-                <VendorReviews />
-              </DashboardLayout>
-            </ProtectedRoute>
-          } 
-        />
-
-        {/* --- Messaging --- */}
-        <Route 
-          path="/vendor/messages" 
-          element={
-            <ProtectedRoute allowedRole="vendor">
-              <DashboardLayout>
-                <Messages currentUser={user} />
-              </DashboardLayout>
-            </ProtectedRoute>
-          } 
-        />
+        <Route path="/vendor/orders"   element={<ProtectedRoute allowedRole="vendor"><DashboardLayout><VendorOrders /></DashboardLayout></ProtectedRoute>} />
+        <Route path="/vendor/wallet"   element={<ProtectedRoute allowedRole="vendor"><DashboardLayout><VendorWallet /></DashboardLayout></ProtectedRoute>} />
+        <Route path="/vendor/reviews"  element={<ProtectedRoute allowedRole="vendor"><DashboardLayout><VendorReviews /></DashboardLayout></ProtectedRoute>} />
+        <Route path="/vendor/messages" element={<ProtectedRoute allowedRole="vendor"><DashboardLayout><Messages currentUser={user} /></DashboardLayout></ProtectedRoute>} />
 
         {/* --- Customer Module --- */}
-        <Route
-          path="/customer"
-          element={
-            <ProtectedRoute allowedRole="customer">
-              <CustomerDashboard />
-            </ProtectedRoute>
-          }
-        />
+        <Route path="/customer" element={
+          <ProtectedRoute allowedRole="customer">
+            <CustomerDashboard />
+          </ProtectedRoute>
+        } />
+
+        {/* --- Payment Module (protected, any logged-in user) --- */}
+        {/* Telebirr payment page — shown before redirecting to Telebirr */}
+        <Route path="/telebirr-pay" element={
+          <ProtectedRoute>
+            <TelebirrPayment />
+          </ProtectedRoute>
+        } />
+
+        {/* Payment success / callback — Telebirr redirects here after payment */}
+        {/* Also used for mock/sandbox simulation */}
+        <Route path="/payment-success" element={
+          <ProtectedRoute>
+            <PaymentSuccess />
+          </ProtectedRoute>
+        } />
 
         {/* --- Shared Settings (Universal) --- */}
         <Route path="/settings" element={<ProtectedRoute><DashboardLayout><Settings /></DashboardLayout></ProtectedRoute>} />

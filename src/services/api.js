@@ -19,18 +19,14 @@ export const registerUser = (formData) => API.post('/auth/register', formData);
 
 // --- VENDOR INTELLIGENCE & REPUTATION ---
 export const getVendorProfile = () => API.get('/vendors/profile'); 
-export const getVendorReputation = () => API.get('/vendors/profile'); 
+// FIX: Set to target the exact backend reputation sub-route
+export const getVendorReputation = () => API.get('/vendors/reputation'); 
 export const getVendorStats = () => API.get('/vendors/stats');
 export const getVendorAnalytics = () => API.get('/vendors/analytics');
 
-// --- VENDOR OPERATIONS (MATCHED TO YOUR BACKEND) ---
-
-// Fixed to match: router.get("/vendor/all", ...)
+// --- VENDOR OPERATIONS ---
 export const getVendorOrders = () => API.get('/orders/vendor/all');
-
-// Fixed to match: router.put("/:id/status", ...)
 export const updateOrderStatus = (id, status) => API.put(`/orders/${id}/status`, { status });
-
 export const getVendorInventory = (page = 1) => API.get(`/vendors/products?page=${page}`);
 export const getVendorWallet = () => API.get('/vendors/wallet');
 export const addProduct = (productData) => API.post('/vendors/products', productData);
@@ -66,17 +62,13 @@ export const getConversations = () => API.get('/messages/conversations');
 export const getChatHistory = (userId) => API.get(`/messages/history/${userId}`);
 export const markAsRead = (messageId) => API.put(`/messages/${messageId}/read`);
 
-// --- REVIEWS (MATCHED TO BACKEND) ---
-
-// Hits router.get('/', getReviews) - fetches all reviews
+// --- REVIEWS ---
 export const getAllReviews = (params = {}) => API.get('/reviews', { params });
-
-// Hits router.get('/product/:productId', getReviews)
 export const getProductReviews = (productId) => API.get(`/reviews/product/${productId}`);
-
-// Hits router.put('/:id/report', reportReview)
 export const reportReview = (id, reason) => API.put(`/reviews/${id}/report`, { reason });
-
-// Hits router.delete('/:id', deleteReview)
 export const deleteReview = (id) => API.delete(`/reviews/${id}`);
+
+// --- GEOSPATIAL TRUST SEARCH ---
+export const executeTrustWeightedSearch = (params) => API.get('/search', { params });
+
 export default API;

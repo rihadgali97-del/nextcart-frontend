@@ -1,7 +1,8 @@
 import React from "react";
-import { useState, useEffect, useCallback } from "react";
-import Logo from '../../components/common/Logo';
-import {
+import { useState, useEffect, useCallback, useRef } from "react";
+import { useNavigate } from "react-router-dom";
+import nextCartLogo from "../../assets/nextcart-logo.png";
+import API, {
   getAdminStats,
   getAdminUsers,
   getAdminOrders,
@@ -338,7 +339,9 @@ const NAV = [
 
 // ═════════════════════════════════════════════════════════════════════════════
 export default function AdminDashboard() {
+  const navigate = useNavigate();
   const [section, setSection]           = useState("dashboard");
+  const [collapsed, setCollapsed]       = useState(false);
   const [stats, setStats]               = useState(null);
   const [users, setUsers]               = useState([]);
   const [vendors, setVendors]           = useState([]);
@@ -350,6 +353,17 @@ export default function AdminDashboard() {
   const [page, setPage]                 = useState({ users: 1, orders: 1, products: 1 });
   const [toast, setToast]               = useState(null);
   const [settingsForm, setSettingsForm] = useState({});
+  const [adminUser]                     = useState(() => {
+    try { return JSON.parse(localStorage.getItem("user") || "{}"); } catch { return {}; }
+  });
+
+  // ── Logout ────────────────────────────────────────────────────────────────
+  const handleLogout = () => {
+    if (!window.confirm("Log out of admin panel?")) return;
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    navigate("/login");
+  };
 
   // ── Search & filter state (one per section) ────────────────────────────────
   const [userSearch,    setUserSearch]    = useState("");
@@ -361,6 +375,22 @@ export default function AdminDashboard() {
   const [orderSearch,   setOrderSearch]   = useState("");
   const [orderFilter,   setOrderFilter]   = useState("all");
   const [auditSearch,   setAuditSearch]   = useState("");
+
+  const [topbarSearch, setTopbarSearch] = useState("");
+
+  // Topbar search syncs into the active section's search box
+  useEffect(() => {
+    if (!topbarSearch) return;
+    if (section === "users")    setUserSearch(topbarSearch);
+    if (section === "vendors")  setVendorSearch(topbarSearch);
+    if (section === "products") setProductSearch(topbarSearch);
+    if (section === "orders")   setOrderSearch(topbarSearch);
+    if (section === "audit")    setAuditSearch(topbarSearch);
+    if (section === "reviews")  setReviewSearch(topbarSearch);
+  }, [topbarSearch, section]);
+
+  // Clear topbar search when switching sections
+  useEffect(() => { setTopbarSearch(""); }, [section]);
 
   const setLoad = (key, val) => setLoading((p) => ({ ...p, [key]: val }));
   const notify  = (msg, type = "success") => {
@@ -954,6 +984,103 @@ export default function AdminDashboard() {
     </div>
   );
 
+  // ── REVIEWS state ────────────────────────────────────────────────────────
+  const [reviews,       setReviews]       = useState([]);
+  const [reviewSearch,  setReviewSearch]  = useState("");
+  const [reviewFilter,  setReviewFilter]  = useState("all");
+
+  const loadReviews = useCallback(async () => {
+    setLoad("reviews", true);
+    try {
+      const { data } = await API.get("/admin/reviews");
+      setReviews(data.data || []);
+    } catch { notify("Failed to load reviews", "error"); }
+    finally { setLoad("reviews", false); }
+  }, []);
+
+  useEffect(() => {
+    if (section === "reviews") loadReviews();
+  }, [section]);
+
+  const handleModerateReview = async (id, action) => {
+    try {
+      await API.put(`/admin/reviews/${id}/moderate`, { action });
+      notify(action === "remove" ? "Review removed" : "Review approved");
+      loadReviews();
+    } catch { notify("Failed to moderate review", "error"); }
+  };
+
+  const filteredReviews = reviews.filter(r => {
+    const ms = !reviewSearch ||
+      r.user?.name?.toLowerCase().includes(reviewSearch.toLowerCase()) ||
+      r.product?.name?.toLowerCase().includes(reviewSearch.toLowerCase()) ||
+      r.comment?.toLowerCase().includes(reviewSearch.toLowerCase());
+    const mf = reviewFilter === "all" || (reviewFilter === "reported" ? r.reported : !r.reported);
+    return ms && mf;
+  });
+
+  const reviewExportCols = [
+    { key: "user",    label: "User",    csvValue: r => r.user?.name || "" },
+    { key: "product", label: "Product", csvValue: r => r.product?.name || "" },
+    { key: "rating",  label: "Rating",  csvValue: r => r.rating },
+    { key: "comment", label: "Comment", csvValue: r => r.comment },
+    { key: "reported",label: "Reported",csvValue: r => r.reported ? "Yes" : "No" },
+    { key: "createdAt",label:"Date",    csvValue: r => new Date(r.createdAt).toLocaleDateString() },
+  ];
+
+  const renderReviews = () => (
+    <Panel title={`Reported Reviews (${filteredReviews.length} of ${reviews.length})`}>
+      <SearchBar value={reviewSearch} onChange={setReviewSearch}
+        placeholder="Search by user, product, or comment…"
+        filters={[
+          { label: "All",      value: "all"      },
+          { label: "Reported", value: "reported" },
+          { label: "Clean",    value: "clean"    },
+        ]}
+        activeFilter={reviewFilter} onFilterChange={setReviewFilter}
+        onExportCSV={() => exportCSV(filteredReviews, reviewExportCols, "reviews_export")}
+        onExportPDF={() => exportPDF(filteredReviews, reviewExportCols, "Reviews Report")}
+      />
+      <Table loading={loading.reviews}
+        cols={[
+          { key: "user", label: "Reviewer", render: r => (
+            <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+              <Avatar name={r.user?.name||"?"} size={28} bg={avatarColor(r.user?.name||"")}/>
+              <span style={{ fontWeight:500, fontSize:12 }}>{r.user?.name||"Unknown"}</span>
+            </div>
+          )},
+          { key: "product", label: "Product", render: r => (
+            <span style={{ fontSize:12, color:"#7a8c7e" }}>{r.product?.name||"—"}</span>
+          )},
+          { key: "rating", label: "Rating", render: r => (
+            <span style={{ color:"#C6A84B", fontWeight:600 }}>
+              {"★".repeat(r.rating||0)}{"☆".repeat(5-(r.rating||0))}
+            </span>
+          )},
+          { key: "comment", label: "Comment", render: r => (
+            <span style={{ fontSize:12, color:"#1a2b1f", maxWidth:240, display:"block",
+              overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{r.comment}</span>
+          )},
+          { key: "reported", label: "Status", render: r => (
+            <Pill label={r.reported ? "reported" : "clean"}/>
+          )},
+          { key: "createdAt", label: "Date", render: r => ago(r.createdAt) },
+          { key: "actions", label: "Actions", render: r => (
+            <div style={{ display:"flex", gap:6 }}>
+              {r.reported && (
+                <ActionBtn label="Approve" color="#1D9E75"
+                  onClick={() => handleModerateReview(r._id, "approve")}/>
+              )}
+              <ActionBtn label="Remove" color="#D85A30"
+                onClick={() => handleModerateReview(r._id, "remove")}/>
+            </div>
+          )},
+        ]}
+        rows={filteredReviews}
+      />
+    </Panel>
+  );
+
   // ── Section map ───────────────────────────────────────────────────────────
   const sectionMap = {
     dashboard: renderDashboard,
@@ -961,95 +1088,224 @@ export default function AdminDashboard() {
     vendors:   renderVendors,
     products:  renderProducts,
     orders:    renderOrders,
-    reviews: () => (
-      <Panel title="Reported Reviews">
-        <p style={{ color: "#7a8c7e", fontSize: 13 }}>
-          Reported reviews are filtered server-side via{" "}
-          <code style={{ background: "#f3f5f1", padding: "1px 5px", borderRadius: 4 }}>GET /admin/reviews</code>.
-          Import and use <code>getReviews</code> / <code>moderateReview</code> from your api.js here.
-        </p>
-      </Panel>
-    ),
-    audit:    renderAudit,
-    settings: renderSettings,
+    reviews:   renderReviews,
+    audit:     renderAudit,
+    settings:  renderSettings,
   };
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <>
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-      <div style={{ display: "flex", minHeight: "100vh", fontFamily: "'DM Sans', sans-serif", background: "#F3F5F1" }}>
+      <style>{`
+        @keyframes spin    { to { transform: rotate(360deg); } }
+        @keyframes fadeIn  { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+        .nav-tooltip       { display:none; }
+        .nav-item:hover .nav-tooltip { display:block; }
+      `}</style>
+      <div style={{ display:"flex", minHeight:"100vh", fontFamily:"'DM Sans',system-ui,sans-serif", background:"#F3F5F1" }}>
 
-        {/* SIDEBAR */}
-        <aside style={{ width: 220, background: "#0E2A23", display: "flex", flexDirection: "column", flexShrink: 0 }}>
-          <div style={{ padding: "20px 18px 16px", borderBottom: "1px solid rgba(255,255,255,.08)",
-            display: "flex", alignItems: "center", gap: 10 }}>
-            <div style={{ width: 36, height: 36, borderRadius: 8, background: "#C6A84B",
-              display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>◈</div>
-            <div>
-              <div style={{ fontSize: 15, fontWeight: 700, color: "#fff", letterSpacing: ".3px" }}>MarketAdmin</div>
-              <div style={{ fontSize: 10, color: "rgba(255,255,255,.4)" }}>Platform Control</div>
+        {/* ── SIDEBAR ─────────────────────────────────────────────────── */}
+        <aside style={{ width:collapsed?80:240, background:"#0f2a29",
+          display:"flex", flexDirection:"column", flexShrink:0,
+          transition:"width .3s cubic-bezier(.4,0,.2,1)", overflow:"hidden",
+          position:"sticky", top:0, height:"100vh" }}>
+
+          {/* Logo + toggle */}
+          <div style={{ padding:"18px 14px 14px", borderBottom:"1px solid rgba(255,255,255,.07)",
+            display:"flex", alignItems:"center",
+            justifyContent:collapsed?"center":"space-between", gap:10, minHeight:72 }}>
+            <div style={{ display:"flex", alignItems:"center", gap:12, overflow:"hidden" }}>
+              {/* Real NextCart logo */}
+              <div style={{ width:40, height:40, borderRadius:"50%", overflow:"hidden",
+                background:"#fff", flexShrink:0, display:"flex", alignItems:"flex-start",
+                justifyContent:"center", boxShadow:"0 2px 8px rgba(0,0,0,.2)" }}>
+                <img src={nextCartLogo} alt="NextCart"
+                  style={{ width:56, maxWidth:"none", transform:"scale(1.5) translateY(-1px)",
+                    objectFit:"contain" }}/>
+              </div>
+              {!collapsed && (
+                <h1 style={{ fontSize:22, fontWeight:900, color:"#fff", margin:0,
+                  whiteSpace:"nowrap", letterSpacing:"-.3px", animation:"fadeIn .3s ease" }}>
+                  Next<span style={{ color:"#c4a456" }}>Cart</span>
+                </h1>
+              )}
             </div>
+            <button onClick={()=>setCollapsed(p=>!p)}
+              style={{ width:28, height:28, borderRadius:8, background:"rgba(255,255,255,.06)",
+                border:"none", color:"rgba(255,255,255,.6)", cursor:"pointer", flexShrink:0,
+                display:"flex", alignItems:"center", justifyContent:"center", fontSize:14,
+                transition:"background .15s" }}
+              onMouseEnter={e=>{ e.currentTarget.style.background="#c4a456"; e.currentTarget.style.color="#fff"; }}
+              onMouseLeave={e=>{ e.currentTarget.style.background="rgba(255,255,255,.06)"; e.currentTarget.style.color="rgba(255,255,255,.6)"; }}>
+              {collapsed ? "›" : "‹"}
+            </button>
           </div>
 
-          <nav style={{ padding: "14px 10px", flex: 1 }}>
-            {NAV.map((item) => (
-              <div key={item.id} onClick={() => setSection(item.id)}
-                style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 12px",
-                  borderRadius: 8, cursor: "pointer", marginBottom: 2, fontSize: 13,
-                  fontWeight: section === item.id ? 500 : 400,
-                  color: section === item.id ? "#C6A84B" : "rgba(255,255,255,.65)",
-                  background: section === item.id ? "rgba(198,168,75,.12)" : "transparent",
-                  borderLeft: section === item.id ? "3px solid #C6A84B" : "3px solid transparent",
-                  transition: "all .15s" }}>
-                <span style={{ fontSize: 15 }}>{item.icon}</span>{item.label}
-              </div>
-            ))}
+          {/* Nav label */}
+          {!collapsed && (
+            <div style={{ padding:"16px 18px 6px", fontSize:10, fontWeight:700, letterSpacing:"2px",
+              color:"#c4a456", opacity:.8, textTransform:"uppercase" }}>Admin Panel</div>
+          )}
+
+          {/* Nav items */}
+          <nav style={{ padding:"8px 8px", flex:1, overflowY:"auto" }}>
+            {NAV.map(item => {
+              const active = section === item.id;
+              return (
+                <div key={item.id} className="nav-item"
+                  onClick={()=>setSection(item.id)}
+                  style={{ position:"relative", display:"flex", alignItems:"center",
+                    gap:collapsed?0:14, padding:collapsed?"11px 0":"10px 14px",
+                    justifyContent:collapsed?"center":"flex-start",
+                    borderRadius:14, cursor:"pointer", marginBottom:2, fontSize:13,
+                    fontWeight:active?700:400,
+                    color:active?"#fff":"rgba(255,255,255,.55)",
+                    background:active?"#c4a456":"transparent",
+                    boxShadow:active?"0 4px 12px rgba(196,164,86,.25)":"none",
+                    transition:"all .2s" }}
+                  onMouseEnter={e=>{ if(!active){ e.currentTarget.style.background="rgba(255,255,255,.06)"; e.currentTarget.style.color="#fff"; }}}
+                  onMouseLeave={e=>{ if(!active){ e.currentTarget.style.background="transparent"; e.currentTarget.style.color="rgba(255,255,255,.55)"; }}}>
+                  <span style={{ fontSize:17, flexShrink:0,
+                    color:active?"#fff":"rgba(255,255,255,.35)",
+                    transition:"color .2s" }}>{item.icon}</span>
+                  {!collapsed && <span style={{ whiteSpace:"nowrap" }}>{item.label}</span>}
+                  {/* Tooltip in collapsed mode */}
+                  {collapsed && (
+                    <div className="nav-tooltip"
+                      style={{ position:"absolute", left:58, background:"#c4a456", color:"#fff",
+                        padding:"5px 12px", borderRadius:10, fontSize:11, fontWeight:700,
+                        whiteSpace:"nowrap", pointerEvents:"none", zIndex:50,
+                        boxShadow:"0 4px 14px rgba(0,0,0,.2)", textTransform:"uppercase",
+                        letterSpacing:".1em" }}>
+                      {item.label}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </nav>
 
-          <div style={{ padding: "14px 18px", borderTop: "1px solid rgba(255,255,255,.08)" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <Avatar name="Admin" size={36} bg="#C6A84B" color="#0E2A23" />
-              <div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: "#fff" }}>Admin</div>
-                <div style={{ fontSize: 11, color: "rgba(255,255,255,.4)" }}>Super Admin</div>
+          {/* Admin profile + logout */}
+          <div style={{ padding:collapsed?"10px 8px":"14px", borderTop:"1px solid rgba(255,255,255,.07)" }}>
+            <div style={{ background:"#1a3433", borderRadius:20, padding:collapsed?"10px 0":"18px",
+              display:"flex", flexDirection:"column", alignItems:"center", gap:collapsed?8:12 }}>
+              <div style={{ display:"flex", alignItems:"center", gap:12,
+                justifyContent:collapsed?"center":"flex-start", width:"100%" }}>
+                <div style={{ width:40, height:40, borderRadius:14, flexShrink:0,
+                  background:"linear-gradient(135deg,#c4a456,#e5c77e)",
+                  display:"flex", alignItems:"center", justifyContent:"center",
+                  color:"#0f2a29", fontWeight:900, fontSize:17,
+                  boxShadow:"0 2px 8px rgba(196,164,86,.35)" }}>
+                  {adminUser?.name?.[0]?.toUpperCase() || "A"}
+                </div>
+                {!collapsed && (
+                  <div style={{ overflow:"hidden", animation:"fadeIn .3s ease" }}>
+                    <div style={{ fontSize:13, fontWeight:700, color:"#fff",
+                      whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis", maxWidth:130 }}>
+                      {adminUser?.name || "System Admin"}
+                    </div>
+                    <div style={{ fontSize:10, color:"#c4a456", fontWeight:700,
+                      textTransform:"uppercase", letterSpacing:".15em" }}>
+                      {adminUser?.role || "Administrator"}
+                    </div>
+                  </div>
+                )}
               </div>
+              {/* Logout button */}
+              <button onClick={handleLogout}
+                title={collapsed?"Log Out":""}
+                style={{ display:"flex", alignItems:"center", justifyContent:"center",
+                  gap:collapsed?0:8, background:"rgba(196,164,86,.12)", color:"#c4a456",
+                  border:"none", borderRadius:12, fontWeight:700, cursor:"pointer",
+                  padding:collapsed?"10px":"10px 0", width:collapsed?40:"100%",
+                  height:collapsed?40:"auto", fontSize:collapsed?16:11,
+                  letterSpacing:collapsed?0:".15em", textTransform:"uppercase",
+                  transition:"all .2s" }}
+                onMouseEnter={e=>{ e.currentTarget.style.background="#c4a456"; e.currentTarget.style.color="#fff"; }}
+                onMouseLeave={e=>{ e.currentTarget.style.background="rgba(196,164,86,.12)"; e.currentTarget.style.color="#c4a456"; }}>
+                <span style={{ fontSize:15 }}>🚪</span>
+                {!collapsed && "Log Out"}
+              </button>
             </div>
+            {!collapsed && (
+              <p style={{ textAlign:"center", fontSize:9, color:"rgba(255,255,255,.1)",
+                marginTop:14, letterSpacing:".4em", textTransform:"uppercase" }}>
+                NextCart • BiT 2026
+              </p>
+            )}
           </div>
         </aside>
 
-        {/* MAIN */}
-        <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
+        {/* ── MAIN ────────────────────────────────────────────────────── */}
+        <div style={{ flex:1, display:"flex", flexDirection:"column", minWidth:0 }}>
           {/* Topbar */}
-          <div style={{ background: "#fff", borderBottom: "1px solid #e8ede9", padding: "14px 24px",
-            display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: "#7a8c7e" }}>
-              Dashboard <span style={{ fontSize: 11 }}>›</span>
-              <span style={{ color: "#1a2b1f", fontWeight: 500, textTransform: "capitalize" }}>{section}</span>
+          <div style={{ background:"#fff", borderBottom:"1px solid #e8ede9", padding:"14px 24px",
+            display:"flex", alignItems:"center", justifyContent:"space-between",
+            position:"sticky", top:0, zIndex:100 }}>
+            <div style={{ display:"flex", alignItems:"center", gap:6, fontSize:13, color:"#7a8c7e" }}>
+              <span>Dashboard</span>
+              <span style={{ fontSize:11 }}>›</span>
+              <span style={{ color:"#1a2b1f", fontWeight:600, textTransform:"capitalize" }}>{section}</span>
             </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+              {/* Topbar quick search — syncs to active section */}
+              <div style={{ position:"relative" }}>
+                <span style={{ position:"absolute", left:10, top:"50%",
+                  transform:"translateY(-50%)", color:"#7a8c7e", fontSize:13,
+                  pointerEvents:"none" }}>🔍</span>
+                <input
+                  value={topbarSearch}
+                  onChange={e => setTopbarSearch(e.target.value)}
+                  placeholder={section === "dashboard" ? "Quick search…" : `Search ${section}…`}
+                  style={{ padding:"7px 12px 7px 30px", border:"1px solid #e8ede9",
+                    borderRadius:9, fontSize:12, color:"#1a2b1f", outline:"none",
+                    width:200, background:"#f9fafb", transition:"border-color .15s" }}
+                  onFocus={e => e.target.style.borderColor="#c4a456"}
+                  onBlur={e  => e.target.style.borderColor="#e8ede9"}
+                />
+              </div>
+              {/* Admin name chip */}
+              <div style={{ display:"flex", alignItems:"center", gap:8, padding:"6px 12px",
+                background:"#f3f5f1", borderRadius:8 }}>
+                <div style={{ width:24, height:24, borderRadius:6, background:"#c4a456",
+                  display:"flex", alignItems:"center", justifyContent:"center",
+                  fontSize:11, fontWeight:700, color:"#0f2a29" }}>
+                  {adminUser?.name?.[0]?.toUpperCase()||"A"}
+                </div>
+                <span style={{ fontSize:12, fontWeight:600, color:"#1a2b1f" }}>
+                  {adminUser?.name?.split(" ")[0] || "Admin"}
+                </span>
+              </div>
               <button
-                onClick={() => { loadStats(); if (section !== "dashboard") setSection("dashboard"); }}
-                style={{ fontSize: 12, background: "#0E2A23", color: "#C6A84B", border: "none",
-                  borderRadius: 8, padding: "7px 14px", cursor: "pointer", fontWeight: 600 }}>
+                onClick={()=>{ loadStats(); if(section!=="dashboard") setSection("dashboard"); }}
+                style={{ fontSize:12, background:"#0f2a29", color:"#c4a456", border:"none",
+                  borderRadius:8, padding:"7px 14px", cursor:"pointer", fontWeight:700 }}>
                 ↻ Refresh
+              </button>
+              <button onClick={handleLogout}
+                style={{ fontSize:12, background:"rgba(216,90,48,.1)", color:"#D85A30",
+                  border:"1px solid rgba(216,90,48,.25)", borderRadius:8,
+                  padding:"7px 14px", cursor:"pointer", fontWeight:600,
+                  display:"flex", alignItems:"center", gap:5 }}>
+                🚪 Logout
               </button>
             </div>
           </div>
 
           {/* Content */}
-          <div style={{ flex: 1, padding: "20px 24px", overflowY: "auto" }}>
+          <div style={{ flex:1, padding:"20px 24px", overflowY:"auto" }}>
             {(sectionMap[section] || sectionMap.dashboard)()}
           </div>
         </div>
 
-        {/* Toast notification */}
+        {/* Toast */}
         {toast && (
-          <div style={{ position: "fixed", bottom: 24, right: 24,
-            background: toast.type === "error" ? "#D85A30" : "#1D9E75",
-            color: "#fff", padding: "12px 20px", borderRadius: 10, fontSize: 13, fontWeight: 500,
-            boxShadow: "0 4px 20px rgba(0,0,0,.15)", zIndex: 9999 }}>
-            {toast.type === "error" ? "✕ " : "✓ "}{toast.msg}
+          <div style={{ position:"fixed", bottom:24, right:24,
+            background: toast.type==="error"?"#D85A30":"#1D9E75",
+            color:"#fff", padding:"12px 20px", borderRadius:10, fontSize:13, fontWeight:500,
+            boxShadow:"0 4px 20px rgba(0,0,0,.15)", zIndex:9999,
+            animation:"fadeIn .2s ease" }}>
+            {toast.type==="error"?"✕ ":"✓ "}{toast.msg}
           </div>
         )}
       </div>

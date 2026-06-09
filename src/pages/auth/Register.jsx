@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, ChevronRight } from 'lucide-react';
+import { Eye, EyeOff, ChevronRight, MapPin } from 'lucide-react';
 import { registerUser } from '../../services/api';
 
 const Register = () => {
   const [role, setRole] = useState('customer');
   const [showPassword, setShowPassword] = useState(false);
+  const [isLocating, setIsLocating] = useState(false);
   const [formData, setFormData] = useState({ 
     firstName: '', 
     lastName: '', 
@@ -14,15 +15,46 @@ const Register = () => {
   });
   const navigate = useNavigate();
 
+  // Helper logic to capture browser coordinates before firing the registration endpoint
+  const getUserCoordinates = () => {
+    return new Promise((resolve) => {
+      if (!navigator.geolocation) {
+        console.warn("Geolocator missing from browser profile.");
+        return resolve(null);
+      }
+
+      setIsLocating(true);
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setIsLocating(false);
+          resolve({
+            longitude: position.coords.longitude,
+            latitude: position.coords.latitude
+          });
+        },
+        (error) => {
+          setIsLocating(false);
+          console.warn(`Location collection omitted: ${error.message}`);
+          resolve(null); // Fallback safely to run registration regardless
+        },
+        { timeout: 6000 } // Safety timeout constraint (6 seconds)
+      );
+    });
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // Constructing the payload to match the backend's expectation: { name, email, password, role }
+    // 1. Attempt to gather background coordinates from the device sensor
+    const coords = await getUserCoordinates();
+
+    // 2. Build the exact matching payload structural template expected by AuthService
     const payload = {
       name: `${formData.firstName} ${formData.lastName}`.trim(),
       email: formData.email,
       password: formData.password,
-      role: role
+      role: role,
+      ...(coords && { longitude: coords.longitude, latitude: coords.latitude })
     };
 
     try {
@@ -48,9 +80,22 @@ const Register = () => {
               {role === 'customer' ? 'Discover curated products and track your orders.' : 'Reach thousands of customers today.'}
             </p>
           </div>
-          <div className="bg-white/10 p-6 rounded-3xl border border-white/10">
-            <p className="text-xs font-bold text-[#c4a456] uppercase mb-2">Pro Tip</p>
-            <p className="text-xs">Verify your email promptly to access all platform features.</p>
+          
+          <div className="space-y-3">
+            {/* Real-time Location Indicator Badge */}
+            <div className={`flex items-center gap-2 p-3.5 rounded-2xl border text-xs font-medium transition-all duration-3xl ${
+              isLocating 
+                ? 'bg-yellow-500/10 border-yellow-500/30 text-yellow-400' 
+                : 'bg-white/5 border-white/10 text-white/70'
+            }`}>
+              <MapPin size={16} className={isLocating ? 'animate-bounce text-yellow-400' : 'text-slate-400'} />
+              <span>{isLocating ? 'Requesting GPS coordinate keys...' : 'Location tracking active on submit'}</span>
+            </div>
+
+            <div className="bg-white/10 p-6 rounded-3xl border border-white/10">
+              <p className="text-xs font-bold text-[#c4a456] uppercase mb-2">Pro Tip</p>
+              <p className="text-xs">Allow location permission access when your browser requests it to see products near you instantly.</p>
+            </div>
           </div>
         </div>
 
@@ -122,10 +167,11 @@ const Register = () => {
 
               <button 
                 type="submit"
-                className="w-full py-4 bg-[#c4a456] text-white font-bold rounded-2xl shadow-lg shadow-[#c4a456]/20 flex items-center justify-center gap-2 group hover:bg-[#b3934b] transition-all"
+                disabled={isLocating}
+                className="w-full py-4 bg-[#c4a456] disabled:bg-slate-400 text-white font-bold rounded-2xl shadow-lg shadow-[#c4a456]/20 flex items-center justify-center gap-2 group hover:bg-[#b3934b] transition-all"
               >
-                Register as {role} 
-                <ChevronRight size={18} className="group-hover:translate-x-1 transition-transform" />
+                {isLocating ? 'Synchronizing GPS...' : `Register as ${role}`}
+                {!isLocating && <ChevronRight size={18} className="group-hover:translate-x-1 transition-transform" />}
               </button>
             </form>
             

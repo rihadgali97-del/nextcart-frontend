@@ -1,6 +1,8 @@
-import React from 'react';
+import React from "react";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import { io } from "socket.io-client";
+import nextCartLogo from "../../assets/nextcart-logo.png";
 import API, {
   getUserProfile,
   updateProfile,
@@ -373,6 +375,145 @@ export default function CustomerDashboard() {
     });
   };
 
+  // ── Socket.io ─────────────────────────────────────────────────────────────────
+  const socketRef = useRef(null);
+
+  useEffect(() => {
+    // Connect once profile is loaded so we have the user ID
+    if (!profile?._id) return;
+
+    const socket = io("http://localhost:5000", {
+      transports: ["websocket"],
+      reconnectionAttempts: 5,
+    });
+    socketRef.current = socket;
+
+    // Join private room with user ID (matches your backend: socket.on('join_chat'))
+    socket.emit("join_chat", profile._id);
+    console.log("🔌 Socket connected, joined room:", profile._id);
+
+    // ── Live order status updates (your orderSocket.js emits 'orderUpdate') ────
+    socket.on("orderUpdate", ({ orderId, status, message }) => {
+      // Update the order in local state immediately
+      setOrders(prev => prev.map(o =>
+        o._id === orderId ? { ...o, status } : o
+      ));
+      // Show a toast so the customer sees it instantly
+      toast.info(`📦 ${message}`);
+      // Also fire a notification bell refresh
+      loadNotifs(1, notifFilter);
+    });
+
+    // ── Incoming chat messages ──────────────────────────────────────────────────
+    socket.on("receive_message", (msg) => {
+      setChatMessages(prev => {
+        // Only add if it belongs to the active chat
+        const activeChatId = activeChatRef.current;
+        if (msg.sender === activeChatId || msg.receiver === activeChatId) {
+          return [...prev, msg];
+        }
+        return prev;
+      });
+      // Update the conversation preview in the list
+      setConvos(prev => prev.map(c => {
+        const otherId = c._id?.toString() || c.userDetails?._id?.toString();
+        if (otherId === msg.sender?.toString()) {
+          return { ...c, lastMessage: msg.text, lastTimestamp: msg.createdAt };
+        }
+        return c;
+      }));
+      // Bump unread badge if chat panel isn't open
+      if (section !== "messages") {
+        setConvos(prev => prev.map(c => {
+          const otherId = c._id?.toString() || c.userDetails?._id?.toString();
+          return otherId === msg.sender?.toString()
+            ? { ...c, unread: (c.unread || 0) + 1 }
+            : c;
+        }));
+      }
+    });
+
+    // ── Message sent confirmation ───────────────────────────────────────────────
+    socket.on("message_sent", (msg) => {
+      // Already added optimistically — just confirm it persisted
+      setChatMessages(prev =>
+        prev.map(m => m._tempId === msg._tempId ? { ...msg } : m)
+      );
+    });
+
+    return () => {
+      socket.disconnect();
+      console.log("🔌 Socket disconnected");
+    };
+  }, [profile?._id]);
+
+  // ── Chat state ────────────────────────────────────────────────────────────────
+  const [activeChat,    setActiveChat]    = useState(null); // { _id, name }
+  const [chatMessages,  setChatMessages]  = useState([]);
+  const [chatInput,     setChatInput]     = useState("");
+  const [chatLoading,   setChatLoading]   = useState(false);
+  const activeChatRef   = useRef(null);
+  const chatBottomRef   = useRef(null);
+
+  // Keep ref in sync for the socket closure
+  useEffect(() => { activeChatRef.current = activeChat?._id; }, [activeChat]);
+
+  // Auto-scroll to bottom when new messages arrive
+  useEffect(() => {
+    chatBottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [chatMessages]);
+
+  const openChat = async (convo) => {
+    const otherId   = convo._id || convo.userDetails?._id;
+    const otherName = convo.userDetails?.name || "Unknown";
+    setActiveChat({ _id: otherId, name: otherName });
+    setChatMessages([]);
+    setChatLoading(true);
+    // Clear unread for this convo
+    setConvos(prev => prev.map(c =>
+      (c._id||c.userDetails?._id) === otherId ? { ...c, unread: 0 } : c
+    ));
+    try {
+      const { data } = await API.get(`/messages/history/${otherId}`);
+      setChatMessages(Array.isArray(data) ? data : data.messages || data.data || []);
+    } catch { toast.error("Failed to load messages"); }
+    finally { setChatLoading(false); }
+  };
+
+  const sendMessage = () => {
+    const text = chatInput.trim();
+    if (!text || !activeChat || !socketRef.current) return;
+
+    const tempId = Date.now().toString();
+    const optimistic = {
+      _tempId:    tempId,
+      sender:     profile._id,
+      receiver:   activeChat._id,
+      text,
+      createdAt:  new Date().toISOString(),
+      pending:    true,
+    };
+
+    // Optimistic UI update
+    setChatMessages(prev => [...prev, optimistic]);
+    setChatInput("");
+
+    // Emit to socket (matches your backend: socket.on('send_message'))
+    socketRef.current.emit("send_message", {
+      senderId:   profile._id,
+      receiverId: activeChat._id,
+      text,
+      _tempId:    tempId,
+    });
+
+    // Update conversation preview
+    setConvos(prev => prev.map(c =>
+      (c._id||c.userDetails?._id) === activeChat._id
+        ? { ...c, lastMessage: text, lastTimestamp: new Date().toISOString() }
+        : c
+    ));
+  };
+
   // ── Notifications ─────────────────────────────────────────────────────────────
   const [notifs,       setNotifs]       = useState([]);
   const [unreadCount,  setUnreadCount]  = useState(0);
@@ -489,7 +630,20 @@ export default function CustomerDashboard() {
     setLoad("cart",true);
     try{
       const {data} = await API.get("/cart");
-      setCart(data.items || data.cart?.items || []);
+      // Backend returns { items: [{ product: {_id,name,price,image,vendor}, quantity }] }
+      // Normalize each item so price/name/image/vendor are always at top level
+      const rawItems = data.items || data.cart?.items || [];
+      const normalized = rawItems.map(item => ({
+        _id:       item._id,
+        productId: item.product?._id || item.product,
+        product:   item.product,
+        name:      item.product?.name  || item.name  || "Unknown",
+        price:     Number(item.product?.price ?? item.price ?? 0),
+        image:     item.product?.image || item.image || null,
+        vendor:    item.product?.vendor || item.vendor || null,
+        quantity:  item.quantity || 1,
+      }));
+      setCart(normalized);
     } catch{ /* cart might be empty */ }
     finally{ setLoad("cart",false); }
   },[]);
@@ -541,8 +695,8 @@ export default function CustomerDashboard() {
   const totalSpent   = orders.filter(o=>o.isPaid).reduce((a,o)=>a+o.totalPrice,0);
   const pendingCount = orders.filter(o=>["pending","processing","shipped"].includes(o.status)).length;
   const deliveredCount = orders.filter(o=>o.status==="delivered").length;
-  const cartTotal    = cart.reduce((a,i)=>a+(i.price*i.quantity),0);
-  const cartCount    = cart.reduce((a,i)=>a+i.quantity,0);
+  const cartTotal    = cart.reduce((a,i)=>a+(Number(i.price||0)*Number(i.quantity||0)),0);
+  const cartCount    = cart.reduce((a,i)=>a+Number(i.quantity||0),0);
 
   const orderStatusCounts = orders.reduce((acc,o)=>{
     acc[o.status] = (acc[o.status]||0)+1; return acc;
@@ -728,7 +882,8 @@ export default function CustomerDashboard() {
     e?.stopPropagation();
     setAddingToCart(productId);
     try {
-      await API.post("/cart", { productId, quantity:1 });
+      // Your cartController accepts both "product" and "productId"
+      await API.post("/cart", { product: productId, productId, quantity: 1 });
       await loadCart();
       toast.success("Added to cart!");
     } catch { toast.error("Failed to add to cart"); }
@@ -861,7 +1016,22 @@ export default function CustomerDashboard() {
 
       {/* Product detail modal */}
       {selectedProduct && <ProductModal product={selectedProduct}
-        onClose={()=>setSelectedProduct(null)} onAddToCart={handleAddToCart} addingToCart={addingToCart}/>}
+        onClose={()=>setSelectedProduct(null)}
+        onAddToCart={handleAddToCart}
+        addingToCart={addingToCart}
+        onMessageVendor={(vendorId, vendorName) => {
+          setSelectedProduct(null);
+          setActiveChat({ _id: vendorId, name: vendorName });
+          setChatMessages([]);
+          setChatLoading(true);
+          API.get(`/messages/history/${vendorId}`)
+            .then(({data}) => setChatMessages(Array.isArray(data)?data:data.messages||data.data||[]))
+            .catch(()=>{})
+            .finally(()=>setChatLoading(false));
+          loadConvos();
+          setSection("messages");
+        }}
+      />}
     </div>
   );
 
@@ -967,9 +1137,9 @@ export default function CustomerDashboard() {
                           </div>
                           <div style={{ flex:1 }}>
                             <div style={{ fontSize:12, fontWeight:500 }}>{item.name}</div>
-                            <div style={{ fontSize:11, color:C.muted }}>x{item.quantity} · ${item.price}</div>
+                            <div style={{ fontSize:11, color:C.muted }}>x{item.quantity} · ${Number(item.price||0).toFixed(2)}</div>
                           </div>
-                          <div style={{ fontWeight:600, fontSize:12 }}>${(item.price*item.quantity).toFixed(2)}</div>
+                          <div style={{ fontWeight:600, fontSize:12 }}>${(Number(item.price||0)*Number(item.quantity||0)).toFixed(2)}</div>
                         </div>
                       ))}
                     </div>
@@ -991,6 +1161,36 @@ export default function CustomerDashboard() {
                         <div><b>Placed:</b> {fmtDate(o.createdAt)}</div>
                         {o.paidAt && <div><b>Paid at:</b> {fmtDate(o.paidAt)}</div>}
                       </div>
+
+                      {/* Message vendor button */}
+                      {o.orderItems?.[0]?.vendor && (
+                        <button
+                          onClick={() => {
+                            const vendorId   = o.orderItems[0].vendor?._id || o.orderItems[0].vendor;
+                            const vendorName = o.orderItems[0].vendor?.name || "Vendor";
+                            // Open chat with this vendor
+                            setActiveChat({ _id: vendorId, name: vendorName });
+                            setChatMessages([]);
+                            setChatLoading(true);
+                            API.get(`/messages/history/${vendorId}`)
+                              .then(({data}) => setChatMessages(Array.isArray(data)?data:data.messages||data.data||[]))
+                              .catch(()=>{})
+                              .finally(()=>setChatLoading(false));
+                            // Also refresh convos and switch section
+                            loadConvos();
+                            setSection("messages");
+                          }}
+                          style={{ marginTop:10, width:"100%", padding:"9px 0",
+                            borderRadius:8, border:`1px solid ${C.sidebar}`,
+                            background:`${C.sidebar}10`, color:C.sidebar,
+                            fontSize:12, fontWeight:600, cursor:"pointer",
+                            display:"flex", alignItems:"center",
+                            justifyContent:"center", gap:6, transition:"all .15s" }}
+                          onMouseEnter={e=>{ e.currentTarget.style.background=C.sidebar; e.currentTarget.style.color=C.gold; }}
+                          onMouseLeave={e=>{ e.currentTarget.style.background=`${C.sidebar}10`; e.currentTarget.style.color=C.sidebar; }}>
+                          💬 Message Vendor
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1019,7 +1219,7 @@ export default function CustomerDashboard() {
   const updateCartQty = async (productId, quantity) => {
     if(quantity<1){ return removeFromCart(productId); }
     try {
-      await API.post("/cart", { productId, quantity });
+      await API.post("/cart", { product: productId, productId, quantity });
       await loadCart();
     } catch { toast.error("Failed to update cart"); }
   };
@@ -1055,20 +1255,87 @@ export default function CustomerDashboard() {
     if(cart.length===0){ toast.error("Cart is empty"); return; }
     setCheckingOut(true);
     try {
-      await API.post("/orders", {
-        orderItems: cart.map(i=>({ product:i.product?._id||i.productId, name:i.name||i.product?.name,
-          quantity:i.quantity, price:i.price, image:i.image, vendor:i.vendor })),
-        shippingAddress: shippingForm,
-        paymentMethod:   shippingForm.paymentMethod,
-        totalPrice:      cartTotal,
+      const { data } = await API.post("/orders", {
+        orderItems: cart.map(i=>({
+          product:  i.productId || i.product?._id,
+          name:     i.name,
+          quantity: i.quantity,
+          price:    i.price,
+          image:    i.image || "",
+          vendor:   i.vendor?._id || i.vendor || "",
+        })),
+        shippingAddress: {
+          address:    shippingForm.address,
+          city:       shippingForm.city,
+          postalCode: shippingForm.postalCode,
+          country:    shippingForm.country,
+        },
+        paymentMethod: shippingForm.paymentMethod,
+        totalPrice:    cartTotal,
       });
-      await API.delete("/cart");
+
+      const orderId      = data.order?._id;
+      const paymentInfo  = data.paymentInfo;
+      const method       = shippingForm.paymentMethod;
+
+      // ── Cash on delivery — no payment gateway needed ──────────────────────
+      if (method === "cash") {
+        try { await API.delete("/cart"); } catch {}
+        setCart([]);
+        toast.success("Order placed! Pay on delivery.");
+        await loadOrders();
+        setSection("orders");
+        return;
+      }
+
+      // ── Store order info for payment pages ────────────────────────────────
+      localStorage.setItem("pending_order_id",       orderId || "");
+      localStorage.setItem("pending_payment_method", method);
+      localStorage.setItem("pending_order_amount",   String(cartTotal));
+
+      // Clear cart now — order is created
+      try { await API.delete("/cart"); } catch {}
       setCart([]);
+
+      // ── Telebirr / CBE — navigate to our payment page first ───────────────
+      if (method === "telebirr" || method === "Telebirr" || method === "cbe") {
+        // Check if backend already gave us a direct URL
+        const directUrl =
+          paymentInfo?.url       ||
+          paymentInfo?.toPayUrl  ||
+          paymentInfo?.redirectUrl;
+
+        if (directUrl && !directUrl.startsWith("/")) {
+          // Real Telebirr URL — go via our payment page with it stored
+          localStorage.setItem("telebirr_redirect_url", directUrl);
+        }
+
+        // Always go through our TelebirrPayment page for nice UX
+        toast.success("Proceeding to payment…");
+        const isMock = !directUrl || directUrl.startsWith("/");
+        navigate(
+          `/telebirr-pay?orderId=${orderId}&amount=${cartTotal.toFixed(2)}${isMock ? "&mock=true" : ""}`
+        );
+        return;
+      }
+
+      // ── Stripe — redirect directly ────────────────────────────────────────
+      if (method === "stripe" || method === "Stripe") {
+        const stripeUrl = paymentInfo?.checkout_url || paymentInfo?.url;
+        if (stripeUrl) {
+          toast.success("Redirecting to Stripe…");
+          setTimeout(() => { window.location.href = stripeUrl; }, 600);
+          return;
+        }
+      }
+
+      // ── Fallback — go to orders ───────────────────────────────────────────
       toast.success("Order placed successfully!");
       await loadOrders();
       setSection("orders");
+
     } catch(err) {
-      toast.error(err.response?.data?.message || "Checkout failed");
+      toast.error(err.response?.data?.message || "Checkout failed. Please try again.");
     } finally { setCheckingOut(false); }
   };
 
@@ -1101,7 +1368,7 @@ export default function CustomerDashboard() {
                   </div>
                   <div style={{ flex:1 }}>
                     <div style={{ fontWeight:500, fontSize:13 }}>{item.name||item.product?.name}</div>
-                    <div style={{ fontSize:11, color:C.muted, marginTop:2 }}>${item.price} each</div>
+                    <div style={{ fontSize:11, color:C.muted, marginTop:2 }}>${Number(item.price||0).toFixed(2)} each</div>
                     <div style={{ display:"flex", alignItems:"center", gap:8, marginTop:8 }}>
                       <button onClick={()=>updateCartQty(item.product?._id||item.productId, item.quantity-1)}
                         style={{ width:26, height:26, borderRadius:6, border:`1px solid ${C.border}`,
@@ -1116,7 +1383,7 @@ export default function CustomerDashboard() {
                   </div>
                   <div style={{ textAlign:"right" }}>
                     <div style={{ fontWeight:700, color:C.green }}>
-                      ${(item.price*item.quantity).toFixed(2)}
+                      ${(Number(item.price||0)*Number(item.quantity||0)).toFixed(2)}
                     </div>
                     <button onClick={()=>removeFromCart(item.product?._id||item.productId)}
                       style={{ background:"none", border:"none", color:C.red, cursor:"pointer",
@@ -1133,7 +1400,7 @@ export default function CustomerDashboard() {
                   {cart.map((item,i)=>(
                     <div key={i} style={{ display:"flex", justifyContent:"space-between", color:C.muted }}>
                       <span>{item.name||item.product?.name} ×{item.quantity}</span>
-                      <span>${(item.price*item.quantity).toFixed(2)}</span>
+                      <span>${(Number(item.price||0)*Number(item.quantity||0)).toFixed(2)}</span>
                     </div>
                   ))}
                   <div style={{ borderTop:`1px solid ${C.border}`, marginTop:8, paddingTop:10,
@@ -1344,40 +1611,200 @@ export default function CustomerDashboard() {
   // SECTION: MESSAGES
   // ══════════════════════════════════════════════════════════════════════════
   const renderMessages = () => (
-    <Panel title="Messages" subtitle="Your conversations">
-      {loading.convos
-        ? <div style={{ textAlign:"center", padding:40 }}><Spinner size={22}/></div>
-        : convos.length===0
-        ? <Empty icon="💬" text="No conversations yet"/>
-        : (() => {
-            const pageItems = convos.slice((messagesPage-1)*ITEMS_PER_PAGE, messagesPage*ITEMS_PER_PAGE);
-            return (
-              <>
-                {pageItems.map((c,i)=>(
-                  <div key={c._id||i} style={{ display:"flex", alignItems:"center", gap:12,
-                    padding:"12px 14px", borderRadius:10, marginBottom:6,
-                    background:"#f9fafb", border:`1px solid ${C.border}`,
-                    cursor:"pointer", transition:"all .15s" }}
-                    onMouseEnter={e=>{ e.currentTarget.style.background=C.sidebar; e.currentTarget.style.color="#fff"; }}
-                    onMouseLeave={e=>{ e.currentTarget.style.background="#f9fafb"; e.currentTarget.style.color=C.text; }}>
-                    <Avatar name={c.userDetails?.name||"?"} size={40} bg={avatarColor(c.userDetails?.name||"")}/>
-                    <div style={{ flex:1 }}>
-                      <div style={{ fontWeight:500, fontSize:13 }}>{c.userDetails?.name||"Unknown"}</div>
-                      <div style={{ fontSize:11, color:C.muted, marginTop:2, overflow:"hidden",
-                        textOverflow:"ellipsis", whiteSpace:"nowrap", maxWidth:260 }}>
-                        {c.lastMessage||"No messages"}
+    <div style={{ display:"flex", height:"calc(100vh - 130px)", gap:0,
+      background:C.card, borderRadius:14, border:`1px solid ${C.border}`,
+      overflow:"hidden", boxShadow:"0 2px 16px rgba(0,0,0,.06)" }}>
+
+      {/* ── LEFT: Conversation list ─────────────────────────────────────── */}
+      <div style={{ width:280, borderRight:`1px solid ${C.border}`,
+        display:"flex", flexDirection:"column", flexShrink:0 }}>
+
+        {/* Header */}
+        <div style={{ padding:"16px 18px", borderBottom:`1px solid ${C.border}` }}>
+          <div style={{ fontWeight:700, fontSize:15, color:C.text, marginBottom:10 }}>
+            Messages
+          </div>
+          <div style={{ position:"relative" }}>
+            <span style={{ position:"absolute", left:10, top:"50%",
+              transform:"translateY(-50%)", fontSize:13, color:C.muted }}>🔍</span>
+            <input placeholder="Search conversations…"
+              style={{ width:"100%", padding:"7px 10px 7px 28px",
+                border:`1px solid ${C.border}`, borderRadius:8, fontSize:12,
+                outline:"none", boxSizing:"border-box", background:"#f9fafb" }}/>
+          </div>
+        </div>
+
+        {/* Convo list */}
+        <div style={{ flex:1, overflowY:"auto" }}>
+          {loading.convos ? (
+            <div style={{ padding:"30px 0", textAlign:"center" }}><Spinner/></div>
+          ) : convos.length === 0 ? (
+            <div style={{ padding:"40px 20px", textAlign:"center" }}>
+              <div style={{ fontSize:32, marginBottom:8 }}>💬</div>
+              <div style={{ fontSize:12, color:C.muted }}>No conversations yet</div>
+            </div>
+          ) : (
+            convos.map((c, i) => {
+              const otherId   = c._id || c.userDetails?._id;
+              const otherName = c.userDetails?.name || "Unknown";
+              const isActive  = activeChat?._id === otherId;
+              const unread    = c.unread || 0;
+              return (
+                <div key={otherId || i} onClick={() => openChat(c)}
+                  style={{ display:"flex", alignItems:"center", gap:12,
+                    padding:"12px 16px", cursor:"pointer", transition:"all .15s",
+                    background: isActive ? `${C.sidebar}` : "#fff",
+                    borderBottom:`1px solid ${C.border}` }}
+                  onMouseEnter={e=>{ if(!isActive) e.currentTarget.style.background="#f5f7f5"; }}
+                  onMouseLeave={e=>{ if(!isActive) e.currentTarget.style.background="#fff"; }}>
+                  <div style={{ position:"relative" }}>
+                    <Avatar name={otherName} size={42} bg={avatarColor(otherName)}/>
+                    {/* Online indicator (static for now) */}
+                    <div style={{ position:"absolute", bottom:1, right:1, width:10, height:10,
+                      borderRadius:"50%", background:"#22c55e",
+                      border:"2px solid #fff" }}/>
+                  </div>
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <div style={{ display:"flex", justifyContent:"space-between",
+                      alignItems:"center", marginBottom:2 }}>
+                      <div style={{ fontWeight:600, fontSize:13,
+                        color: isActive ? "#fff" : C.text,
+                        overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+                        {otherName}
+                      </div>
+                      {unread > 0 && (
+                        <span style={{ background:C.red, color:"#fff", fontSize:9,
+                          fontWeight:700, minWidth:16, height:16, borderRadius:20,
+                          display:"flex", alignItems:"center", justifyContent:"center",
+                          padding:"0 4px", flexShrink:0 }}>
+                          {unread}
+                        </span>
+                      )}
+                    </div>
+                    <div style={{ fontSize:11, overflow:"hidden", textOverflow:"ellipsis",
+                      whiteSpace:"nowrap",
+                      color: isActive ? "rgba(255,255,255,.6)" : C.muted }}>
+                      {c.lastMessage || "Start a conversation"}
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </div>
+
+      {/* ── RIGHT: Chat window ──────────────────────────────────────────── */}
+      {!activeChat ? (
+        <div style={{ flex:1, display:"flex", flexDirection:"column",
+          alignItems:"center", justifyContent:"center", color:C.muted }}>
+          <div style={{ fontSize:56, marginBottom:14 }}>💬</div>
+          <div style={{ fontSize:16, fontWeight:600, color:C.text, marginBottom:6 }}>
+            Select a conversation
+          </div>
+          <div style={{ fontSize:13 }}>Choose a chat from the left to start messaging</div>
+        </div>
+      ) : (
+        <div style={{ flex:1, display:"flex", flexDirection:"column", minWidth:0 }}>
+
+          {/* Chat header */}
+          <div style={{ padding:"14px 20px", borderBottom:`1px solid ${C.border}`,
+            display:"flex", alignItems:"center", gap:12,
+            background:"#fafbfa" }}>
+            <Avatar name={activeChat.name} size={38} bg={avatarColor(activeChat.name)}/>
+            <div style={{ flex:1 }}>
+              <div style={{ fontWeight:700, fontSize:14, color:C.text }}>{activeChat.name}</div>
+              <div style={{ fontSize:11, color:"#22c55e", fontWeight:500 }}>● Online</div>
+            </div>
+            <button onClick={()=>setActiveChat(null)}
+              style={{ background:"none", border:"none", fontSize:18,
+                cursor:"pointer", color:C.muted, padding:"4px 8px" }}>×</button>
+          </div>
+
+          {/* Messages area */}
+          <div style={{ flex:1, overflowY:"auto", padding:"16px 20px",
+            display:"flex", flexDirection:"column", gap:10,
+            background:"#f8fafb" }}>
+            {chatLoading ? (
+              <div style={{ textAlign:"center", padding:"40px 0" }}><Spinner size={22}/></div>
+            ) : chatMessages.length === 0 ? (
+              <div style={{ textAlign:"center", padding:"40px 0" }}>
+                <div style={{ fontSize:32, marginBottom:8 }}>👋</div>
+                <div style={{ fontSize:12, color:C.muted }}>
+                  Say hello to {activeChat.name}!
+                </div>
+              </div>
+            ) : (
+              chatMessages.map((msg, i) => {
+                const isOwn = msg.sender === profile?._id ||
+                              msg.sender?._id === profile?._id ||
+                              msg.senderId === profile?._id;
+                return (
+                  <div key={msg._id || i}
+                    style={{ display:"flex", justifyContent: isOwn ? "flex-end" : "flex-start",
+                      alignItems:"flex-end", gap:8 }}>
+                    {!isOwn && (
+                      <Avatar name={activeChat.name} size={28}
+                        bg={avatarColor(activeChat.name)}/>
+                    )}
+                    <div style={{ maxWidth:"68%" }}>
+                      <div style={{ padding:"10px 14px", borderRadius: isOwn
+                          ? "18px 18px 4px 18px" : "18px 18px 18px 4px",
+                        background: isOwn ? C.sidebar : "#fff",
+                        color: isOwn ? "#fff" : C.text,
+                        fontSize:13, lineHeight:1.5,
+                        boxShadow:"0 1px 4px rgba(0,0,0,.08)",
+                        opacity: msg.pending ? .7 : 1 }}>
+                        {msg.text}
+                      </div>
+                      <div style={{ fontSize:10, color:C.muted, marginTop:3,
+                        textAlign: isOwn ? "right" : "left" }}>
+                        {msg.createdAt ? ago(msg.createdAt) : "sending…"}
+                        {isOwn && !msg.pending && (
+                          <span style={{ color:C.green, marginLeft:4 }}>✓</span>
+                        )}
                       </div>
                     </div>
-                    <div style={{ fontSize:11, color:C.muted }}>{ago(c.lastTimestamp)}</div>
+                    {isOwn && (
+                      <Avatar name={profile?.name||"?"} size={28}
+                        bg={C.gold} color={C.sidebar}/>
+                    )}
                   </div>
-                ))}
-                <Pagination page={messagesPage} totalItems={convos.length}
-                  onChange={p=>{ setMessagesPage(p); window.scrollTo(0,0); }}/>
-              </>
-            );
-          })()
-      }
-    </Panel>
+                );
+              })
+            )}
+            <div ref={chatBottomRef}/>
+          </div>
+
+          {/* Input bar */}
+          <div style={{ padding:"12px 16px", borderTop:`1px solid ${C.border}`,
+            display:"flex", gap:10, alignItems:"center", background:"#fff" }}>
+            <input
+              value={chatInput}
+              onChange={e => setChatInput(e.target.value)}
+              onKeyDown={e => { if(e.key==="Enter" && !e.shiftKey){ e.preventDefault(); sendMessage(); }}}
+              placeholder={`Message ${activeChat.name}…`}
+              style={{ flex:1, padding:"10px 14px", border:`1px solid ${C.border}`,
+                borderRadius:24, fontSize:13, outline:"none", background:"#f9fafb",
+                transition:"border-color .15s" }}
+              onFocus={e=>e.target.style.borderColor=C.green}
+              onBlur={e=>e.target.style.borderColor=C.border}
+            />
+            <button onClick={sendMessage}
+              disabled={!chatInput.trim()}
+              style={{ width:40, height:40, borderRadius:"50%", border:"none",
+                background: chatInput.trim() ? C.sidebar : "#e8ede9",
+                color: chatInput.trim() ? C.gold : C.muted,
+                cursor: chatInput.trim() ? "pointer" : "not-allowed",
+                fontSize:18, display:"flex", alignItems:"center",
+                justifyContent:"center", transition:"all .2s",
+                flexShrink:0 }}>
+              ➤
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
   );
 
   // ══════════════════════════════════════════════════════════════════════════
@@ -1677,13 +2104,24 @@ export default function CustomerDashboard() {
           {/* Logo */}
           <div style={{ padding:"18px 14px 14px", borderBottom:"1px solid rgba(255,255,255,.08)",
             display:"flex", alignItems:"center", gap:10, minHeight:70 }}>
-            <div style={{ width:36, height:36, borderRadius:9, background:C.gold, flexShrink:0,
-              display:"flex", alignItems:"center", justifyContent:"center",
-              fontSize:18, fontWeight:700, color:C.sidebar }}>◈</div>
+            {/* Real NextCart logo — same as AdminSidebar */}
+            <div style={{ width:36, height:36, borderRadius:"50%", background:"#fff",
+              overflow:"hidden", display:"flex", alignItems:"flex-start",
+              justifyContent:"center", flexShrink:0,
+              boxShadow:"0 2px 8px rgba(0,0,0,.2)" }}>
+              <img src={nextCartLogo} alt="NextCart"
+                style={{ width:50, maxWidth:"none",
+                  transform:"scale(1.5) translateY(-2px)", objectFit:"contain" }}/>
+            </div>
             {!collapsed && (
               <div style={{ overflow:"hidden" }}>
-                <div style={{ fontSize:14, fontWeight:700, color:"#fff", whiteSpace:"nowrap" }}>MyMarket</div>
-                <div style={{ fontSize:10, color:"rgba(255,255,255,.4)", whiteSpace:"nowrap" }}>Customer Portal</div>
+                <div style={{ fontSize:15, fontWeight:900, color:"#fff",
+                  whiteSpace:"nowrap", letterSpacing:"-.2px" }}>
+                  Next<span style={{ color:C.gold }}>Cart</span>
+                </div>
+                <div style={{ fontSize:9, color:"rgba(255,255,255,.4)",
+                  whiteSpace:"nowrap", textTransform:"uppercase",
+                  letterSpacing:".15em", fontWeight:700 }}>Customer Portal</div>
               </div>
             )}
           </div>
@@ -2045,7 +2483,7 @@ function OrderTracker({ status }) {
 }
 
 // ─── Product modal ────────────────────────────────────────────────────────────
-function ProductModal({ product, onClose, onAddToCart, addingToCart }) {
+function ProductModal({ product, onClose, onAddToCart, addingToCart, onMessageVendor }) {
   const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(false);
 
@@ -2104,9 +2542,27 @@ function ProductModal({ product, onClose, onAddToCart, addingToCart }) {
           <button onClick={()=>onAddToCart(product._id)} disabled={product.stock===0||addingToCart===product._id}
             style={{ background:product.stock===0?"#ccc":C.sidebar, color:product.stock===0?"#999":C.gold,
               border:"none", padding:"11px 24px", borderRadius:9, fontSize:14, fontWeight:600,
-              cursor:product.stock===0?"not-allowed":"pointer", width:"100%", marginBottom:20 }}>
+              cursor:product.stock===0?"not-allowed":"pointer", width:"100%", marginBottom:10 }}>
             {addingToCart===product._id?"Adding…":"Add to Cart"}
           </button>
+
+          {/* Message vendor from product modal */}
+          {product.vendor && (
+            <button onClick={()=>{
+              onClose();
+              onMessageVendor?.(product.vendor?._id||product.vendor,
+                product.vendor?.name||"Vendor");
+            }}
+            style={{ width:"100%", padding:"10px 24px", borderRadius:9, fontSize:13,
+              fontWeight:600, cursor:"pointer", marginBottom:20,
+              border:`1px solid ${C.sidebar}`, background:`${C.sidebar}10`,
+              color:C.sidebar, display:"flex", alignItems:"center",
+              justifyContent:"center", gap:6 }}
+            onMouseEnter={e=>{ e.currentTarget.style.background=C.sidebar; e.currentTarget.style.color=C.gold; }}
+            onMouseLeave={e=>{ e.currentTarget.style.background=`${C.sidebar}10`; e.currentTarget.style.color=C.sidebar; }}>
+              💬 Message Vendor
+            </button>
+          )}
 
           {/* Reviews in modal */}
           <div style={{ borderTop:`1px solid ${C.border}`, paddingTop:16 }}>
