@@ -314,6 +314,7 @@ const toast = {
 const NAV = [
   { id:"home",     label:"Dashboard",  icon:"⊞",  badge:null },
   { id:"shop",     label:"Shop",       icon:"🛍",  badge:null },
+  { id:"nearby",   label:"Near Me",    icon:"📍",  badge:null },
   { id:"orders",   label:"My Orders",  icon:"📦",  badge:"orders" },
   { id:"cart",     label:"Cart",       icon:"🛒",  badge:"cart" },
   { id:"wishlist", label:"Wishlist",   icon:"❤️",  badge:"wishlist" },
@@ -831,6 +832,7 @@ export default function CustomerDashboard() {
           <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
             {[
               { icon:"🛍", label:"Browse Products",    action:()=>setSection("shop")     },
+              { icon:"📍", label:"Find Nearby Vendors", action:()=>setSection("nearby")  },
               { icon:"📦", label:"Track My Orders",    action:()=>setSection("orders")   },
               { icon:"⭐", label:"Write a Review",     action:()=>setSection("reviews")  },
               { icon:"💬", label:"My Messages",        action:()=>setSection("messages") },

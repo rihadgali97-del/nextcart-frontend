@@ -1,5 +1,6 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { GoogleOAuthProvider } from '@react-oauth/google';
 
 // Auth Pages
 import Login from './pages/auth/Login';
@@ -89,68 +90,70 @@ function App() {
     console.error("Failed to parse user for routing", err);
   }
 
+  // Inject Google OAuth Client contextual validation trees on wrapper bounds
+  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || "PROVIDE_YOUR_CLIENT_ID_KEY";
+
   return (
-    <Router>
-      <Routes>
-        {/* Public Routes */}
-        <Route path="/login"    element={<Login />} />
-        <Route path="/register" element={<Register />} />
-        
-        {/* --- Public Trust & Proximity Product Search Interface --- */}
-        <Route path="/search" element={<ProductSearch />} />
-        
-        {/* Root Route Evaluation */}
-        <Route path="/" element={<ProtectedRoute><RoleRedirector /></ProtectedRoute>} />
+    <GoogleOAuthProvider clientId={googleClientId}>
+      <Router>
+        <Routes>
+          {/* Public Routes */}
+          <Route path="/login"    element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          
+          {/* --- Public Trust & Proximity Product Search Interface --- */}
+          <Route path="/search" element={<ProductSearch />} />
+          
+          {/* Root Route Evaluation */}
+          <Route path="/" element={<ProtectedRoute><RoleRedirector /></ProtectedRoute>} />
 
-        {/* --- Admin Module --- */}
-        <Route path="/admin" element={
-          <ProtectedRoute allowedRole="admin">
-            <AdminDashboard />
-          </ProtectedRoute>
-        } />
-        <Route path="/admin/users"     element={<ProtectedRoute allowedRole="admin"><DashboardLayout><ManageUsers /></DashboardLayout></ProtectedRoute>} />
-        <Route path="/admin/products"  element={<ProtectedRoute allowedRole="admin"><DashboardLayout><ManageProducts /></DashboardLayout></ProtectedRoute>} />
-        <Route path="/admin/vendors"   element={<ProtectedRoute allowedRole="admin"><DashboardLayout><ManageVendors /></DashboardLayout></ProtectedRoute>} />
-        <Route path="/admin/settings"  element={<ProtectedRoute allowedRole="admin"><DashboardLayout><SystemSettings /></DashboardLayout></ProtectedRoute>} />
+          {/* --- Admin Module --- */}
+          <Route path="/admin" element={
+            <ProtectedRoute allowedRole="admin">
+              <AdminDashboard />
+            </ProtectedRoute>
+          } />
+          <Route path="/admin/users"     element={<ProtectedRoute allowedRole="admin"><DashboardLayout><ManageUsers /></DashboardLayout></ProtectedRoute>} />
+          <Route path="/admin/products"  element={<ProtectedRoute allowedRole="admin"><DashboardLayout><ManageProducts /></DashboardLayout></ProtectedRoute>} />
+          <Route path="/admin/vendors"   element={<ProtectedRoute allowedRole="admin"><DashboardLayout><ManageVendors /></DashboardLayout></ProtectedRoute>} />
+          <Route path="/admin/settings"  element={<ProtectedRoute allowedRole="admin"><DashboardLayout><SystemSettings /></DashboardLayout></ProtectedRoute>} />
 
-        {/* --- Vendor Module --- */}
-        <Route path="/vendor"          element={<ProtectedRoute allowedRole="vendor"><DashboardLayout><VendorDashboard /></DashboardLayout></ProtectedRoute>} />
-        <Route path="/vendor/products" element={<ProtectedRoute allowedRole="vendor"><DashboardLayout><VendorInventory /></DashboardLayout></ProtectedRoute>} />
-        <Route path="/vendor/orders"   element={<ProtectedRoute allowedRole="vendor"><DashboardLayout><VendorOrders /></DashboardLayout></ProtectedRoute>} />
-        <Route path="/vendor/wallet"   element={<ProtectedRoute allowedRole="vendor"><DashboardLayout><VendorWallet /></DashboardLayout></ProtectedRoute>} />
-        <Route path="/vendor/reviews"  element={<ProtectedRoute allowedRole="vendor"><DashboardLayout><VendorReviews /></DashboardLayout></ProtectedRoute>} />
-        <Route path="/vendor/messages" element={<ProtectedRoute allowedRole="vendor"><DashboardLayout><Messages currentUser={user} /></DashboardLayout></ProtectedRoute>} />
+          {/* --- Vendor Module --- */}
+          <Route path="/vendor"          element={<ProtectedRoute allowedRole="vendor"><DashboardLayout><VendorDashboard /></DashboardLayout></ProtectedRoute>} />
+          <Route path="/vendor/products" element={<ProtectedRoute allowedRole="vendor"><DashboardLayout><VendorInventory /></DashboardLayout></ProtectedRoute>} />
+          <Route path="/vendor/orders"   element={<ProtectedRoute allowedRole="vendor"><DashboardLayout><VendorOrders /></DashboardLayout></ProtectedRoute>} />
+          <Route path="/vendor/wallet"   element={<ProtectedRoute allowedRole="vendor"><DashboardLayout><VendorWallet /></DashboardLayout></ProtectedRoute>} />
+          <Route path="/vendor/reviews"  element={<ProtectedRoute allowedRole="vendor"><DashboardLayout><VendorReviews /></DashboardLayout></ProtectedRoute>} />
+          <Route path="/vendor/messages" element={<ProtectedRoute allowedRole="vendor"><DashboardLayout><Messages currentUser={user} /></DashboardLayout></ProtectedRoute>} />
 
-        {/* --- Customer Module --- */}
-        <Route path="/customer" element={
-          <ProtectedRoute allowedRole="customer">
-            <CustomerDashboard />
-          </ProtectedRoute>
-        } />
+          {/* --- Customer Module --- */}
+          <Route path="/customer" element={
+            <ProtectedRoute allowedRole="customer">
+              <CustomerDashboard />
+            </ProtectedRoute>
+          } />
 
-        {/* --- Payment Module (protected, any logged-in user) --- */}
-        {/* Telebirr payment page — shown before redirecting to Telebirr */}
-        <Route path="/telebirr-pay" element={
-          <ProtectedRoute>
-            <TelebirrPayment />
-          </ProtectedRoute>
-        } />
+          {/* --- Payment Module (protected, any logged-in user) --- */}
+          <Route path="/telebirr-pay" element={
+            <ProtectedRoute>
+              <TelebirrPayment />
+            </ProtectedRoute>
+          } />
 
-        {/* Payment success / callback — Telebirr redirects here after payment */}
-        {/* Also used for mock/sandbox simulation */}
-        <Route path="/payment-success" element={
-          <ProtectedRoute>
-            <PaymentSuccess />
-          </ProtectedRoute>
-        } />
+          <Route path="/payment-success" element={
+            <ProtectedRoute>
+              <PaymentSuccess />
+            </ProtectedRoute>
+          } />
 
-        {/* --- Shared Settings (Universal) --- */}
-        <Route path="/settings" element={<ProtectedRoute><DashboardLayout><Settings /></DashboardLayout></ProtectedRoute>} />
+          {/* --- Shared Settings (Universal) --- */}
+          <Route path="/settings" element={<ProtectedRoute><DashboardLayout><Settings /></DashboardLayout></ProtectedRoute>} />
 
-        {/* Catch-all Redirect */}
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </Router>
+          {/* Catch-all Redirect */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </Router>
+    </GoogleOAuthProvider>
   );
 }
 
