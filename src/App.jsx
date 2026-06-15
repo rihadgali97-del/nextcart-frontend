@@ -8,10 +8,16 @@ import Register from './pages/auth/Register';
 
 // Layout & Common
 import DashboardLayout from './components/layouts/DashboardLayout';
+import PublicLayout from './components/layouts/PublicLayout';
 import Settings from './pages/vendor/Settings'; 
 
 // Public Feature Pages
+import Home from './pages/Home';
+import About from './pages/About';
+import Services from './pages/Services';
 import ProductSearch from './components/ProductSearch';
+import ProximitySearch from './components/ProximitySearch';
+import Search from './components/Search';
 
 // Admin Pages
 import AdminDashboard from './pages/admin/AdminDashboard';
@@ -101,11 +107,14 @@ function App() {
           <Route path="/login"    element={<Login />} />
           <Route path="/register" element={<Register />} />
           
-          {/* --- Public Trust & Proximity Product Search Interface --- */}
-          <Route path="/search" element={<ProductSearch />} />
-          
-          {/* Root Route Evaluation */}
-          <Route path="/" element={<ProtectedRoute><RoleRedirector /></ProtectedRoute>} />
+          <Route element={<PublicLayout />}>
+            <Route path="/" element={<Home />} />
+            <Route path="/home" element={<Home />} />
+            <Route path="/about" element={<About />} />
+            <Route path="/services" element={<Services />} />
+            <Route path="/search" element={<Search />} />
+            <Route path="/proximity-search" element={<Search />} />
+          </Route>
 
           {/* --- Admin Module --- */}
           <Route path="/admin" element={

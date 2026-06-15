@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import SectionHeader from '../components/ui/SectionHeader';
 import ProductCard from '../components/ui/ProductCard';
 import { ShoppingBag, ArrowRight, Sparkles, Shield, Zap, Users } from 'lucide-react';
 
 const Home = () => {
+  const navigate = useNavigate();
   // Dummy data representing state pulling from MERN backend
   const [products] = useState([
     { _id: '1', name: 'Premium Leather Boots', price: '3,400', category: 'Footwear', isVerified: true, vendorName: 'Zara Shoes Habesha' },
@@ -11,6 +13,7 @@ const Home = () => {
     { _id: '3', name: 'Waterproof Active Backpack', price: '2,800', category: 'Bags', isVerified: false, vendorName: 'Addis Goods' },
     { _id: '4', name: 'Wireless Noise-Canceling Buds', price: '5,500', category: 'Electronics', isVerified: true, vendorName: 'Alphi Electronics' },
   ]);
+
 
   const categories = ['All', 'Electronics', 'Footwear', 'Clothing', 'Accessories', 'Bags'];
 
@@ -36,7 +39,7 @@ const Home = () => {
                 Explore Products 
                 <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
               </button>
-              <button className="px-8 py-4 bg-white/5 hover:bg-white/10 text-white border border-white/10 font-bold text-sm rounded-2xl transition-all">
+              <button onClick={() => navigate('/register')} className="px-8 py-4 bg-white/5 hover:bg-white/10 text-white border border-white/10 font-bold text-sm rounded-2xl transition-all">
                 Become a Vendor
               </button>
             </div>

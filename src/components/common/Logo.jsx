@@ -7,7 +7,7 @@ const Logo = ({ className = "h-10", showText = true, lightText = false }) => {
     <div className={`flex items-center gap-3 select-none ${className}`}>
       
       {/* Container that crops the image to ONLY show the upper cart/arrow graphic */}
-      <div className="w-10 h-10 overflow-hidden flex items-start justify-center rounded-xl bg-white/5 p-0.5">
+      <div className="w-10 h-10 overflow-hidden flex items-start justify-center rounded-full bg-white/5 p-0.5">
         <img 
           src={nextCartLogo} 
           alt="NextCart Icon" 

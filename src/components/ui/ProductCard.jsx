@@ -19,6 +19,11 @@ const ProductCard = ({ product }) => {
             <span>Verified Vendor</span>
           </div>
         )}
+        {(product.distanceInKm !== undefined || product.distance !== undefined) && (
+          <div className="absolute top-4 right-4 z-10 bg-white/95 backdrop-blur-sm text-slate-700 px-3 py-1 rounded-full text-xs font-bold shadow-sm">
+            {product.distanceInKm !== undefined ? `${parseFloat(product.distanceInKm).toFixed(1)} km` : `${(product.distance / 1000).toFixed(1)} km`}
+          </div>
+        )}
       </div>
 
       {/* Meta Information */}
