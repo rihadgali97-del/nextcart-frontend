@@ -1,15 +1,15 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, ChevronRight, MapPin } from 'lucide-react';
+import { Eye, EyeOff } from 'lucide-react';
 import { GoogleLogin } from '@react-oauth/google';
-import axios from 'axios';
-import { registerUser } from '../../services/api';
+import { googleAuth, registerUser } from '../../services/api';
 import Logo from '../../components/common/Logo';
 
 const Register = () => {
   const [role, setRole] = useState('customer');
   const [showPassword, setShowPassword] = useState(false);
   const [isLocating, setIsLocating] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [formData, setFormData] = useState({ 
     firstName: '', 
@@ -18,6 +18,10 @@ const Register = () => {
     password: '' 
   });
   const navigate = useNavigate();
+
+  const getAuthErrorMessage = (err, fallback) => (
+    err.response?.data?.message || err.response?.data?.error || fallback
+  );
 
   const getUserCoordinates = () => {
     return new Promise((resolve) => {
@@ -45,7 +49,13 @@ const Register = () => {
     });
   };
 
-  const processAuthenticationSuccess = (token, dataBlock) => {
+  const processAuthenticationSuccess = (dataBlock) => {
+    const { token } = dataBlock;
+    if (!token) {
+      setError("Authentication succeeded, but the server did not send a token.");
+      return;
+    }
+
     localStorage.setItem('token', token);
     const userData = dataBlock.result || dataBlock.user || dataBlock.data || dataBlock;
     
@@ -57,17 +67,18 @@ const Register = () => {
     localStorage.setItem('user', JSON.stringify(normalizedUser));
 
     if (normalizedUser.role === 'admin') {
-      window.location.href = '/admin';
+      navigate('/admin', { replace: true });
     } else if (normalizedUser.role === 'vendor') {
-      window.location.href = '/vendor';
+      navigate('/vendor', { replace: true });
     } else {
-      window.location.href = '/customer';
+      navigate('/customer', { replace: true });
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setIsSubmitting(true);
     
     const coords = await getUserCoordinates();
 
@@ -84,27 +95,30 @@ const Register = () => {
       alert("Account created! Please check your email to verify.");
       navigate('/login');
     } catch (err) {
-      setError(err.response?.data?.message || "Registration failed.");
+      setError(getAuthErrorMessage(err, "Registration failed."));
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const handleGoogleSuccess = async (credentialResponse) => {
     setError('');
     const coords = await getUserCoordinates();
+    setIsSubmitting(true);
     
     try {
-      const res = await axios.post('http://localhost:5000/api/auth/google-login', {
+      const res = await googleAuth({
         idToken: credentialResponse.credential,
         role: role,
         ...(coords && { longitude: coords.longitude, latitude: coords.latitude })
       });
 
-      if (res.data.token) {
-        processAuthenticationSuccess(res.data.token, res.data.result);
-      }
+      processAuthenticationSuccess(res.data);
     } catch (err) {
       console.error("Google Auth Node Fail:", err.response?.data || err.message);
-      setError(err.response?.data?.message || "Google Social registration failed.");
+      setError(getAuthErrorMessage(err, "Google registration failed."));
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -166,7 +180,9 @@ const Register = () => {
             </button>
           </div>
 
-          <button type="submit" disabled={isLocating} className="w-full py-3 bg-[#c4a456] text-white font-semibold rounded-md">{isLocating ? 'Synchronizing GPS...' : `Register as ${role}`}</button>
+          <button type="submit" disabled={isLocating || isSubmitting} className="w-full py-3 bg-[#c4a456] text-white font-semibold rounded-md disabled:opacity-70">
+            {isLocating ? 'Synchronizing GPS...' : isSubmitting ? 'Creating account...' : `Register as ${role}`}
+          </button>
         </form>
 
         <div className="w-full flex flex-col items-center my-4">

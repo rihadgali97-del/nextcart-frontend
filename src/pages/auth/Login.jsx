@@ -1,19 +1,29 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, Mail, Lock, ChevronRight, Users, Store } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock } from 'lucide-react';
 import { GoogleLogin } from '@react-oauth/google';
-import axios from 'axios';
-import { loginUser } from '../../services/api';
+import { googleAuth, loginUser } from '../../services/api';
 import Logo from '../../components/common/Logo';
 
 const Login = () => {
   const [formData, setFormData] = useState({ email: '', password: '' });
-  const [role, setRole] = useState('customer'); // Tracks context matching choices for Google SignIn
+  const role = 'customer';
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
 
-  const processAuthenticationSuccess = (token, dataBlock) => {
+  const getAuthErrorMessage = (err, fallback) => (
+    err.response?.data?.message || err.response?.data?.error || fallback
+  );
+
+  const processAuthenticationSuccess = (dataBlock) => {
+    const { token } = dataBlock;
+    if (!token) {
+      setError("Login successful, but the server did not send a token.");
+      return;
+    }
+
     localStorage.setItem('token', token);
     const userData = dataBlock.result || dataBlock.user || dataBlock.data || dataBlock;
     
@@ -25,45 +35,44 @@ const Login = () => {
     localStorage.setItem('user', JSON.stringify(normalizedUser));
 
     if (normalizedUser.role === 'admin') {
-      window.location.href = '/admin';
+      navigate('/admin', { replace: true });
     } else if (normalizedUser.role === 'vendor') {
-      window.location.href = '/vendor';
+      navigate('/vendor', { replace: true });
     } else {
-      window.location.href = '/customer';
+      navigate('/customer', { replace: true });
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setIsSubmitting(true);
     try {
       const response = await loginUser(formData);
-      if (response.data.token) {
-        processAuthenticationSuccess(response.data.token, response.data);
-      } else {
-        setError("Login successful, but user data was missing from the server.");
-      }
+      processAuthenticationSuccess(response.data);
     } catch (err) {
       console.error("Login Error:", err);
-      setError(err.response?.data?.message || "Login failed. Check your connection.");
+      setError(getAuthErrorMessage(err, "Login failed. Check your email and password."));
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const handleGoogleSuccess = async (credentialResponse) => {
     setError('');
+    setIsSubmitting(true);
     try {
-      // Direct pipeline deployment handling both register/login dynamically
-      const res = await axios.post('http://localhost:5000/api/auth/google-login', {
+      const res = await googleAuth({
         idToken: credentialResponse.credential,
         role: role
       });
 
-      if (res.data.token) {
-        processAuthenticationSuccess(res.data.token, res.data.result);
-      }
+      processAuthenticationSuccess(res.data);
     } catch (err) {
       console.error("Google Auth Node Fail:", err.response?.data || err.message);
-      setError(err.response?.data?.message || "Google Social single sign-on execution failed.");
+      setError(getAuthErrorMessage(err, "Google sign-in failed."));
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -107,7 +116,15 @@ const Login = () => {
             </button>
           </div>
 
-          <button type="submit" className="w-full py-3 bg-[#c4a456] text-white font-semibold rounded-md">Sign In</button>
+          <div className="flex justify-end">
+            <button type="button" onClick={() => navigate('/forgot-password')} className="text-xs font-semibold text-[#c4a456]">
+              Forgot password?
+            </button>
+          </div>
+
+          <button type="submit" disabled={isSubmitting} className="w-full py-3 bg-[#c4a456] text-white font-semibold rounded-md disabled:opacity-70">
+            {isSubmitting ? 'Signing in...' : 'Sign In'}
+          </button>
         </form>
 
         <div className="w-full flex flex-col items-center my-4">

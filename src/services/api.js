@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const API = axios.create({
-  baseURL: 'http://localhost:5000/api', 
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
 });
 
 // Automatically add the token to every request if it exists
@@ -16,6 +16,9 @@ API.interceptors.request.use((req) => {
 // --- AUTHENTICATION ---
 export const loginUser = (formData) => API.post('/auth/login', formData);
 export const registerUser = (formData) => API.post('/auth/register', formData);
+export const googleAuth = (formData) => API.post('/auth/google-login', formData);
+export const forgotPassword = (formData) => API.post('/auth/forgot-password', formData);
+export const resetPassword = (token, formData) => API.patch(`/auth/reset-password/${token}`, formData);
 
 // --- VENDOR INTELLIGENCE & REPUTATION ---
 export const getVendorProfile = () => API.get('/vendors/profile'); 
