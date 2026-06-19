@@ -19,26 +19,48 @@ const ProximitySearch = () => {
 
   const categories = ['Electronics', 'Footwear', 'Clothing', 'Accessories', 'Bags'];
 
+  const normalizeProduct = (product) => {
+    const normalized = { ...product };
+    if (normalized.category && typeof normalized.category === 'object') {
+      normalized.category = normalized.category.name || normalized.category._id || '';
+    }
+    if (!normalized.vendorName) {
+      normalized.vendorName = normalized.vendor?.name || normalized.vendor?.businessName || 'Elite Storefront';
+    }
+    if (normalized.price === undefined || normalized.price === null) {
+      normalized.price = typeof normalized.price === 'string' ? normalized.price : 0;
+    }
+    if (normalized.averageRating === undefined || normalized.averageRating === null) {
+      normalized.averageRating = 4.8;
+    }
+    return normalized;
+  };
+
   // Geolocation trigger
   const toggleLocation = () => {
     if (coords.lat) {
-      // Turn off proximity filter cleanly
       const newCoords = { lng: null, lat: null };
       setCoords(newCoords);
       updateUrlParams(newCoords);
-    } else if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const newCoords = {
-            lng: position.coords.longitude.toString(),
-            lat: position.coords.latitude.toString()
-          };
-          setCoords(newCoords);
-          updateUrlParams(newCoords);
-        },
-        () => alert("Location access denied. Using standard search fallback.")
-      );
+      return;
     }
+
+    if (!navigator.geolocation) {
+      alert("Geolocation is not supported by your browser.");
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const newCoords = {
+          lng: position.coords.longitude.toString(),
+          lat: position.coords.latitude.toString()
+        };
+        setCoords(newCoords);
+        updateUrlParams(newCoords);
+      },
+      () => alert("Location access denied. Using standard search fallback.")
+    );
   };
 
   const updateUrlParams = (updatedFields = {}) => {
@@ -55,6 +77,13 @@ const ProximitySearch = () => {
       if (cleanParams[key] === null || cleanParams[key] === '') delete cleanParams[key];
     });
 
+    // always include radius when proximity is active
+    if (cleanParams.lng && cleanParams.lat) {
+      cleanParams.radius = '50';
+    } else {
+      delete cleanParams.radius;
+    }
+
     setSearchParams(cleanParams);
   };
 
@@ -66,15 +95,17 @@ const ProximitySearch = () => {
         ...(searchParams.get('category') && { category: searchParams.get('category') }),
         ...(searchParams.get('lng') && { lng: searchParams.get('lng') }),
         ...(searchParams.get('lat') && { lat: searchParams.get('lat') }),
-        maxDistanceKm: '50' // Consolidated clean default
+        radius: '50' // Backend expects radius in kilometres
       };
 
       const response = await executeTrustWeightedSearch(params);
       if (response.data?.success) {
-        setProducts(response.data.data);
+        const list = Array.isArray(response.data.data) ? response.data.data : [];
+        setProducts(list.map(normalizeProduct));
       }
     } catch (err) {
       console.error("Search fetch failure", err);
+      setProducts([]);
     } finally {
       setLoading(false);
     }

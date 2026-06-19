@@ -49,7 +49,7 @@ const Footer = () => {
     { icon: Facebook, label: 'Facebook', href: 'https://facebook.com' },
     { icon: Instagram, label: 'Instagram', href: 'https://instagram.com' },
     { icon: Twitter, label: 'Twitter', href: 'https://twitter.com' },
-    { icon: Linkedin, label: 'LinkedIn', href: 'https://linkedin.com' },
+    { icon: Linkedin, label: 'LinkedIn', href: 'https://linkedin.com/in/rihad-gali-06b973376' },
   ];
 
   return (

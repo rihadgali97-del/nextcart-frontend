@@ -117,7 +117,7 @@ function App() {
             <Route path="/about" element={<About />} />
             <Route path="/services" element={<Services />} />
             <Route path="/search" element={<Search />} />
-            <Route path="/proximity-search" element={<Search />} />
+            <Route path="/proximity-search" element={<ProximitySearch />} />
           </Route>
 
           {/* --- Admin Module --- */}

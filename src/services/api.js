@@ -1,7 +1,8 @@
 import axios from 'axios';
+import { API_BASE_URL } from '../config/env';
 
 const API = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
+  baseURL: API_BASE_URL,
 });
 
 // Automatically add the token to every request if it exists
@@ -10,6 +11,13 @@ API.interceptors.request.use((req) => {
   if (token) {
     req.headers.Authorization = `Bearer ${token}`;
   }
+  
+  // Let axios handle FormData automatically
+  // Don't set Content-Type if it's FormData - axios will set it to multipart/form-data
+  if (req.data instanceof FormData) {
+    delete req.headers['Content-Type'];
+  }
+  
   return req;
 });
 

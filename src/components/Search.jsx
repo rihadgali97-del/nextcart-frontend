@@ -45,7 +45,9 @@ const Pagination = ({ page, pages, onChange }) => {
 
 const SearchComponent = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [query, setQuery] = useState(searchParams.get('q') || '');
+  const [searchType, setSearchType] = useState(searchParams.get('type') || 'product');
+  const [query, setQuery] = useState(searchParams.get('type') === 'category' ? searchParams.get('category') || '' : searchParams.get('q') || '');
+  const [category, setCategory] = useState(searchParams.get('category') || '');
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -61,9 +63,10 @@ const SearchComponent = () => {
   const debounceRef = useRef(null);
 
   const doSearch = useCallback(async (opts = {}) => {
-    const { q = query, lat = coords.lat, lng = coords.lng, page: p = page, limit: l = limit, sort: s = sort } = opts;
+    const { q = query, category: c = category, lat = coords.lat, lng = coords.lng, page: p = page, limit: l = limit, sort: s = sort } = opts;
+    const searchKey = searchType === 'category' ? c : q;
 
-    if (!q || !q.trim()) {
+    if (!searchKey || !searchKey.trim()) {
       setProducts([]);
       setError('');
       setPages(1);
@@ -74,7 +77,7 @@ const SearchComponent = () => {
     setLoading(true);
     setError('');
     try {
-      const resp = await searchProducts({ q, lat, lng, page: p, limit: l, sort: s });
+      const resp = await searchProducts({ q: searchType === 'category' ? '' : q, category: searchType === 'category' ? c : '', lat, lng, page: p, limit: l, sort: s });
       const data = resp.data?.data || resp.data || [];
       setProducts(Array.isArray(data) ? data : []);
 
@@ -93,10 +96,13 @@ const SearchComponent = () => {
   }, [query, coords, page, limit, sort]);
 
   useEffect(() => {
-    const q = searchParams.get('q') || '';
+    const type = searchParams.get('type') || 'product';
+    const q = type === 'category' ? searchParams.get('category') || '' : searchParams.get('q') || '';
     const p = parseInt(searchParams.get('page') || '1', 10);
     const s = searchParams.get('sort') || 'relevance';
+    setSearchType(type);
     setQuery(q);
+    setCategory(searchParams.get('category') || '');
     setPage(p);
     setSort(s);
   }, [searchParams]);
@@ -141,8 +147,30 @@ const SearchComponent = () => {
     e.preventDefault();
     if (debounceRef.current) clearTimeout(debounceRef.current);
     setPage(1);
-    setSearchParams({ q: query, page: '1', sort });
-    doSearch({ q: query, lat: coords.lat, lng: coords.lng, page: 1, limit, sort });
+
+    const params = {
+      page: '1',
+      sort,
+      type: searchType,
+      ...(searchType === 'category' ? { category: query } : { q: query })
+    };
+
+    if (coords.lat && coords.lng) {
+      params.lat = coords.lat;
+      params.lng = coords.lng;
+    }
+
+    setSearchParams(params);
+
+    doSearch({
+      q: searchType === 'category' ? '' : query,
+      category: searchType === 'category' ? query : '',
+      lat: coords.lat,
+      lng: coords.lng,
+      page: 1,
+      limit,
+      sort
+    });
   };
 
   return (
@@ -154,7 +182,7 @@ const SearchComponent = () => {
             <input
               aria-label="Search products"
               className="w-full bg-transparent outline-none placeholder-slate-400 text-slate-800"
-              placeholder="Search products, vendors or categories..."
+              placeholder={searchType === 'category' ? 'Search categories...' : 'Search products, vendors or categories...'}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
             />
@@ -162,20 +190,25 @@ const SearchComponent = () => {
 
           <div className="flex items-center gap-2 pr-2">
             <select
-              aria-label="Sort results"
-              value={sort}
+              aria-label="Search type"
+              value={searchType}
               onChange={(e) => {
-                const nextSort = e.target.value;
-                setSort(nextSort);
+                const nextType = e.target.value;
+                setSearchType(nextType);
                 setPage(1);
-                setSearchParams({ q: query, page: '1', sort: nextSort });
+                setSearchParams({
+                  q: nextType === 'category' ? '' : query,
+                  category: nextType === 'category' ? query : '',
+                  page: '1',
+                  sort,
+                  type: nextType,
+                });
               }}
               className="text-xs bg-transparent outline-none mr-2"
             >
-              <option value="relevance">Relevance</option>
-              <option value="distance">Distance</option>
-              <option value="price_asc">Price: Low→High</option>
-              <option value="price_desc">Price: High→Low</option>
+              <option value="product">Product</option>
+              <option value="category">Category</option>
+              <option value="proximity">Proximity</option>
             </select>
 
             <button type="button" onClick={handleToggleLocation} title="Toggle proximity search" className={`p-2 rounded-xl transition ${useLocation ? 'bg-[#c4a456]/10 text-[#0f2a29]' : 'text-slate-500 hover:bg-slate-50'}`}>

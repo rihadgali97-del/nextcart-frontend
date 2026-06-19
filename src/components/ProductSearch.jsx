@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import axios from 'axios';
 import { useGeolocation } from '../hooks/useGeolocation';
+import { searchProducts } from '../services/api';
 
 const ProductSearch = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -19,13 +19,11 @@ const ProductSearch = () => {
     setError('');
 
     try {
-      let url = `http://localhost:5000/api/products/search?q=${encodeURIComponent(searchQuery)}`;
-      
-      if (location.lat && location.lng) {
-        url += `&lat=${location.lat}&lng=${location.lng}`;
-      }
-
-      const response = await axios.get(url);
+      const response = await searchProducts({
+        q: searchQuery,
+        lat: location.lat,
+        lng: location.lng,
+      });
       
       // ✅ Ensure the response data is always an array
       let productsArray = [];

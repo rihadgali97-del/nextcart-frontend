@@ -2,7 +2,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { getVendorInventory, deleteProduct, getCategories, addProduct } from '../../services/api';
 import {
   Edit3, Trash2, Plus, Package, Search,
-  BarChart3, TrendingUp, AlertCircle, X, Star, RefreshCw
+  BarChart3, TrendingUp, AlertCircle, X, Star, RefreshCw, Upload, Loader
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
@@ -18,8 +18,9 @@ export default function VendorInventory() {
   const [loading,     setLoading]     = useState(true);
   const [searchTerm,  setSearchTerm]  = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [formData,    setFormData]    = useState({ name:'', description:'', price:'', stock:'', category:'', image:'' });
-  const [submitting,  setSubmitting]  = useState(false);
+  const [formData,    setFormData]    = useState({ name:'', description:'', price:'', stock:'', category:'', image:null });
+  const [imagePreview, setImagePreview] = useState('');
+  const [uploading,   setUploading]   = useState(false);
   const [msg,         setMsg]         = useState(null);
 
   useEffect(() => { fetchAll(); }, []);
@@ -36,6 +37,51 @@ export default function VendorInventory() {
 
   const showMsg = (type, text) => { setMsg({type,text}); setTimeout(()=>setMsg(null),3500); };
 
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        showMsg('error', 'Image must be less than 5MB');
+        return;
+      }
+      setFormData(p => ({...p, image: file}));
+      const reader = new FileReader();
+      reader.onload = (event) => setImagePreview(event.target.result);
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setUploading(true);
+    try {
+      let submitData = formData;
+      
+      // Use FormData if image is a File object
+      if (formData.image instanceof File) {
+        const fd = new FormData();
+        fd.append('name', formData.name);
+        fd.append('description', formData.description);
+        fd.append('price', formData.price);
+        fd.append('stock', formData.stock);
+        fd.append('category', formData.category);
+        fd.append('image', formData.image);
+        submitData = fd;
+      }
+      
+      const res = await addProduct(submitData);
+      const newP = res.data?.data || res.data;
+      setProducts(prev => [newP, ...prev]);
+      setIsModalOpen(false);
+      setFormData({ name:'', description:'', price:'', stock:'', category:'', image:null });
+      setImagePreview('');
+      showMsg('success','Product published!');
+    } catch (err) { 
+      showMsg('error', err.response?.data?.message || 'Failed to add product'); 
+    }
+    finally { setUploading(false); }
+  };
+
   const stats = useMemo(() => {
     const totalValue = products.reduce((a,p)=>a+(Number(p.price)*Number(p.stock)),0);
     const lowStock   = products.filter(p=>p.stock<=5).length;
@@ -51,20 +97,6 @@ export default function VendorInventory() {
     p.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     p.category?.name?.toLowerCase().includes(searchTerm.toLowerCase())
   );
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setSubmitting(true);
-    try {
-      const res = await addProduct(formData);
-      const newP = res.data?.data || res.data;
-      setProducts(prev => [newP, ...prev]);
-      setIsModalOpen(false);
-      setFormData({ name:'', description:'', price:'', stock:'', category:'', image:'' });
-      showMsg('success','Product published!');
-    } catch (err) { showMsg('error', err.response?.data?.message || 'Failed to add product'); }
-    finally { setSubmitting(false); }
-  };
 
   const handleDelete = async (id) => {
     if (!window.confirm('Delete this product?')) return;
@@ -103,7 +135,7 @@ export default function VendorInventory() {
             className="p-3 bg-white border border-slate-200 rounded-2xl hover:border-[#c4a456] transition-all shadow-sm">
             <RefreshCw size={17} className="text-slate-400"/>
           </button>
-          <button onClick={()=>setIsModalOpen(true)}
+          <button onClick={()=>{setIsModalOpen(true); setImagePreview('');}}
             className="flex items-center gap-2 px-5 py-3 rounded-2xl font-bold text-sm shadow-lg transition-all hover:opacity-90"
             style={{ background:C.dark, color:C.gold }}>
             <Plus size={18}/> Add Product
@@ -282,10 +314,10 @@ export default function VendorInventory() {
       {/* Add Product Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl p-8 animate-in zoom-in-95 duration-200">
+          <div className="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl p-8 animate-in zoom-in-95 duration-200 max-h-[calc(100vh-4rem)] overflow-y-auto">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-xl font-black" style={{ color:C.dark }}>New Product</h2>
-              <button onClick={()=>setIsModalOpen(false)} className="p-2 rounded-xl hover:bg-slate-100 transition-all">
+              <button onClick={()=>{setIsModalOpen(false); setImagePreview('');}} className="p-2 rounded-xl hover:bg-slate-100 transition-all">
                 <X size={18} className="text-slate-400"/>
               </button>
             </div>
@@ -294,7 +326,6 @@ export default function VendorInventory() {
                 { name:'name',        placeholder:'Product name',   type:'text'   },
                 { name:'price',       placeholder:'Price (ETB)',    type:'number' },
                 { name:'stock',       placeholder:'Stock quantity', type:'number' },
-                { name:'image',       placeholder:'Image URL',      type:'text'   },
               ].map(f=>(
                 <input key={f.name} name={f.name} type={f.type} placeholder={f.placeholder} required={f.name!=='image'}
                   value={formData[f.name]} onChange={e=>setFormData(p=>({...p,[f.name]:e.target.value}))}
@@ -309,10 +340,48 @@ export default function VendorInventory() {
                 <option value="">Select Category</option>
                 {categories.map(c=><option key={c._id} value={c._id}>{c.name}</option>)}
               </select>
-              <button type="submit" disabled={submitting}
-                className="w-full py-4 rounded-2xl font-black text-sm disabled:opacity-60 transition-all"
+
+              {/* Image Upload Section */}
+              <div className="space-y-2">
+                <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">
+                  Product Image
+                </label>
+                <div className="flex gap-3">
+                  <input type="file" accept="image/*" onChange={handleImageChange} disabled={uploading}
+                    className="hidden" id="imageInput"/>
+                  <label htmlFor="imageInput"
+                    className="flex-1 px-4 py-3.5 bg-slate-50 rounded-2xl border border-dashed border-slate-300 hover:border-[#c4a456] cursor-pointer transition-all flex items-center justify-center gap-2 text-slate-400 hover:text-[#c4a456]">
+                    <Upload size={16}/>
+                    <span className="text-sm font-medium">{formData.image ? 'Change Image' : 'Upload Image'}</span>
+                  </label>
+                  {imagePreview && (
+                    <button type="button" onClick={() => {setFormData(p=>({...p,image:null})); setImagePreview('');}}
+                      className="px-4 py-3.5 bg-slate-50 rounded-2xl border border-transparent hover:bg-red-50 hover:border-red-200 text-red-400 transition-all">
+                      <X size={16}/>
+                    </button>
+                  )}
+                </div>
+                {imagePreview && (
+                  <div className="mt-3 p-2 bg-slate-50 rounded-2xl border border-slate-200">
+                    <img src={imagePreview} alt="Preview" className="w-full h-32 object-cover rounded-xl"/>
+                    <p className="text-[10px] text-slate-400 mt-2">
+                      {formData.image?.name || 'Selected image'}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              <button type="submit" disabled={uploading}
+                className="w-full py-4 rounded-2xl font-black text-sm disabled:opacity-60 transition-all flex items-center justify-center gap-2"
                 style={{ background:C.dark, color:C.gold }}>
-                {submitting ? 'Publishing…' : 'Publish Product'}
+                {uploading ? (
+                  <>
+                    <Loader size={16} className="animate-spin"/>
+                    Uploading…
+                  </>
+                ) : (
+                  'Publish Product'
+                )}
               </button>
             </form>
           </div>

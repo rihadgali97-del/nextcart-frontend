@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import io from 'socket.io-client';
+import { io } from 'socket.io-client';
+import { SOCKET_URL } from '../../config/env';
 import { Search, User, ShieldCheck, Star, AlertTriangle, Fingerprint, Lock } from 'lucide-react';
 import ChatBubble from '../../components/chat/ChatBubble';
 import ChatInput from '../../components/chat/ChatInput';
 
-// Note: In production, move this to an environment variable
-const socket = io('http://localhost:5000');
+// Socket server URL is provided by central config
+const socket = io(SOCKET_URL);
 
 const Messages = ({ currentUser }) => {
   const [messages, setMessages] = useState([]);

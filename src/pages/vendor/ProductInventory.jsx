@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import axios from 'axios';
-import { Edit3, Trash2, Plus, Package, Search, BarChart3, PieChart as PieIcon, TrendingUp, AlertCircle } from 'lucide-react';
+import API from '../../services/api';
+import { Edit3, Trash2, Plus, Package, Search, BarChart3, PieChart as PieIcon, TrendingUp, AlertCircle, Star } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, CartesianGrid } from 'recharts';
 
 const ProductInventory = () => {
@@ -11,10 +11,7 @@ const ProductInventory = () => {
   useEffect(() => {
     const fetchInventory = async () => {
       try {
-        const token = localStorage.getItem('token');
-        const { data } = await axios.get('http://localhost:5000/api/products/vendor-inventory', {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        const { data } = await API.get('/products/vendor-inventory');
         setProducts(data);
       } catch (err) {
         console.error("Inventory fetch failed", err);

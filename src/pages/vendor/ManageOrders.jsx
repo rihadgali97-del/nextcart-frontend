@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import axios from 'axios';
+import API from '../../services/api';
 import { 
   Package, Search, Filter, TrendingUp, CheckCircle, 
   Clock, XCircle, ChevronRight, Download, DollarSign 
@@ -17,12 +17,8 @@ const ManageOrders = () => {
 
   const fetchOrders = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const res = await axios.get('http://localhost:5000/api/orders/vendor/all', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      // Handle potential variations in response structure
-      const fetchedOrders = res.data.orders || res.data.data || [];
+      const res = await API.get('/orders/vendor/all');
+      const fetchedOrders = res.data.orders || res.data.data || res.data || [];
       setOrders(fetchedOrders);
     } catch (err) {
       console.error("Order fetch failed", err);
@@ -62,11 +58,7 @@ const ManageOrders = () => {
 
   const updateStatus = async (orderId, newStatus) => {
     try {
-      const token = localStorage.getItem('token');
-      await axios.put(`http://localhost:5000/api/orders/${orderId}/status`, 
-        { status: newStatus },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      await API.put(`/orders/${orderId}/status`, { status: newStatus });
       fetchOrders();
     } catch (err) {
       alert("Failed to update status");

@@ -2,7 +2,11 @@ import React from 'react';
 import { Star, ShieldCheck, ArrowUpRight, ShoppingBag } from 'lucide-react';
 
 const ProductCard = ({ product }) => {
-  const { name, price, category, averageRating, isVerified, image, vendorName } = product;
+  const { name, price, category, averageRating, isVerified, image, vendorName, vendor } = product;
+  const categoryLabel = category && typeof category === 'object' ? category.name || category._id : category;
+  const vendorLabel = vendorName && typeof vendorName === 'string'
+    ? vendorName
+    : vendor?.name || vendorName?.name || vendorName?.businessName || 'Elite Storefront';
 
   return (
     <div className="group bg-white rounded-[2.5rem] border border-slate-100 p-5 transition-all duration-300 hover:shadow-2xl hover:shadow-slate-100 hover:-translate-y-1.5 flex flex-col h-full">
@@ -28,7 +32,7 @@ const ProductCard = ({ product }) => {
 
       {/* Meta Information */}
       <div className="flex items-center justify-between text-xs text-slate-400 mb-2 font-medium px-1">
-        <span className="bg-slate-100 px-2.5 py-1 rounded-md text-slate-600 font-semibold">{category}</span>
+        <span className="bg-slate-100 px-2.5 py-1 rounded-md text-slate-600 font-semibold">{categoryLabel}</span>
         <div className="flex items-center gap-1">
           <Star size={13} className="fill-amber-400 text-amber-400" />
           <span className="text-slate-700 font-bold">{averageRating || "4.8"}</span>
@@ -40,7 +44,7 @@ const ProductCard = ({ product }) => {
         <h3 className="text-lg font-bold text-slate-800 line-clamp-1 group-hover:text-[#0f2a29] transition-colors">
           {name}
         </h3>
-        <p className="text-xs text-slate-400 mt-0.5">by {vendorName || "Elite Storefront"}</p>
+        <p className="text-xs text-slate-400 mt-0.5">by {vendorLabel}</p>
       </div>
 
       {/* Pricing & Call-To-Action Footer */}
