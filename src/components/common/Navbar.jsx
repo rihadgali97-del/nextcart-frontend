@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation, useSearchParams, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-// Imported Terminal icon to visually separate technical developer reference links
 import { ShoppingBag, Search, User, LogOut, Menu, X, Terminal } from 'lucide-react';
 import Logo from './Logo';
 import LanguageSelector from './LanguageSelector';

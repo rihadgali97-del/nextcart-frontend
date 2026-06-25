@@ -25,7 +25,7 @@ const Home = () => {
         
         if (Array.isArray(data)) {
           const parsedCategories = data.map(cat => 
-            typeof cat === 'object' ? { _id: cat._id, name: cat.name } : { _id: cat, name: cat }
+            cat && typeof cat === 'object' ? { _id: cat._id, name: cat.name } : { _id: cat, name: cat }
           );
           setCategories([{ _id: 'All', name: 'All' }, ...parsedCategories]);
         }
@@ -66,14 +66,16 @@ const Home = () => {
         const response = await searchProducts(params);
         
         let productsArray = [];
-        if (response.data && response.data.data) {
-          productsArray = response.data.data;
-        } else if (Array.isArray(response.data)) {
-          productsArray = response.data;
-        } else if (response.data && Array.isArray(response.data.products)) {
-          productsArray = response.data.products;
-        } else if (response && Array.isArray(response.data)) {
-          productsArray = response.data;
+        if (response && response.data) {
+          if (response.data.data) {
+            productsArray = response.data.data;
+          } else if (Array.isArray(response.data)) {
+            productsArray = response.data;
+          } else if (Array.isArray(response.data.products)) {
+            productsArray = response.data.products;
+          }
+        } else if (Array.isArray(response)) {
+          productsArray = response;
         }
 
         setProducts(Array.isArray(productsArray) ? productsArray : []);
