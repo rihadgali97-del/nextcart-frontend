@@ -36,7 +36,7 @@ import VendorWallet from './pages/vendor/VendorWallet';
 import VendorReviews from './pages/vendor/VendorReviews'; 
 
 // Customer Pages
-import CustomerDashboard from './pages/customer/CustomerDashboard';
+import CustomerDashboard from './pages/customer/Customerdashboard';
 
 // Payment Pages
 import TelebirrPayment from './pages/payment/TelebirrPayment';
