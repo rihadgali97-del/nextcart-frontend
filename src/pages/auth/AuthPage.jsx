@@ -3,6 +3,10 @@ import { Eye, EyeOff } from 'lucide-react';
 
 const AuthPage = ({ type = 'login' }) => {
   const [showPassword, setShowPassword] = React.useState(false);
+  // 🛠️ Track local role and conditional form text values inside this component layout
+  const [role, setRole] = React.useState('vendor'); 
+  const [faydaNumber, setFaydaNumber] = React.useState('');
+  const [licenseNumber, setLicenseNumber] = React.useState('');
 
   return (
     <div className="min-h-screen bg-[#e5e7eb] flex items-center justify-center p-4">
@@ -11,7 +15,6 @@ const AuthPage = ({ type = 'login' }) => {
         {/* Left Side: Branding/Illustration */}
         <div className="w-full md:w-1/2 bg-[#f3f4f6] p-12 flex flex-col justify-center items-center text-center">
           <div className="mb-8">
-            {/* Replace with your actual illustration asset */}
             <img 
               src="https://illustrations.popsy.co/gray/data-analysis.svg" 
               alt="NextCart Auth" 
@@ -29,7 +32,7 @@ const AuthPage = ({ type = 'login' }) => {
         </div>
 
         {/* Right Side: Form */}
-        <div className="w-full md:w-1/2 p-12 flex flex-col justify-center">
+        <div className="w-full md:w-1/2 p-12 flex flex-col justify-center overflow-y-auto">
           <div className="max-w-sm mx-auto w-full">
             <h1 className="text-3xl font-bold text-slate-900 mb-2">
               {type === 'login' ? 'Welcome Back!' : 'Create Account'}
@@ -59,6 +62,30 @@ const AuthPage = ({ type = 'login' }) => {
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
               </div>
+
+              {/* 🛠️ NEW: Show Fayda & License parameters conditionally during registration if Vendor */}
+              {type === 'register' && role === 'vendor' && (
+                <div className="space-y-4 pt-2 border-t border-slate-100 animate-fadeIn">
+                  <div>
+                    <input 
+                      type="text" 
+                      placeholder="National Fayda ID Number" 
+                      value={faydaNumber}
+                      onChange={(e) => setFaydaNumber(e.target.value)}
+                      className="w-full px-5 py-4 bg-slate-100 border-none rounded-2xl text-sm focus:ring-2 focus:ring-ncGold outline-none transition-all"
+                    />
+                  </div>
+                  <div>
+                    <input 
+                      type="text" 
+                      placeholder="Trade License Number" 
+                      value={licenseNumber}
+                      onChange={(e) => setLicenseNumber(e.target.value)}
+                      className="w-full px-5 py-4 bg-slate-100 border-none rounded-2xl text-sm focus:ring-2 focus:ring-ncGold outline-none transition-all"
+                    />
+                  </div>
+                </div>
+              )}
 
               <button className="w-full py-4 bg-ncGold text-white font-bold rounded-2xl shadow-lg hover:bg-opacity-90 transition-all mt-6">
                 {type === 'login' ? 'Sign in' : 'Register'}

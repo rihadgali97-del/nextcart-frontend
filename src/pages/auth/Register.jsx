@@ -15,7 +15,10 @@ const Register = () => {
     firstName: '', 
     lastName: '', 
     email: '', 
-    password: '' 
+    password: '',
+    // 🛠️ NEW: Vendor explicit registration fields
+    faydaNumber: '',
+    licenseNumber: ''
   });
   const navigate = useNavigate();
 
@@ -87,7 +90,12 @@ const Register = () => {
       email: formData.email,
       password: formData.password,
       role: role,
-      ...(coords && { longitude: coords.longitude, latitude: coords.latitude })
+      ...(coords && { longitude: coords.longitude, latitude: coords.latitude }),
+      // 🛠️ NEW: Include conditionally if vendor is selected
+      ...(role === 'vendor' && {
+        faydaNumber: formData.faydaNumber,
+        licenseNumber: formData.licenseNumber
+      })
     };
 
     try {
@@ -110,7 +118,12 @@ const Register = () => {
       const res = await googleAuth({
         idToken: credentialResponse.credential,
         role: role,
-        ...(coords && { longitude: coords.longitude, latitude: coords.latitude })
+        ...(coords && { longitude: coords.longitude, latitude: coords.latitude }),
+        // 🛠️ NEW: Add strings for tracking during OAuth route signup if applicable
+        ...(role === 'vendor' && {
+          faydaNumber: formData.faydaNumber,
+          licenseNumber: formData.licenseNumber
+        })
       });
 
       processAuthenticationSuccess(res.data);
@@ -179,6 +192,27 @@ const Register = () => {
               {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
             </button>
           </div>
+
+          {/* 🛠️ NEW: Conditionally rendered fields for Vendors */}
+          {role === 'vendor' && (
+            <div className="space-y-4 pt-1 border-t border-slate-100 animate-fadeIn">
+              <p className="text-xs font-semibold text-slate-500 tracking-wide uppercase">Verification Details</p>
+              <input
+                type="text"
+                placeholder="National Fayda ID Number"
+                required={role === 'vendor'}
+                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-md text-sm outline-none focus:ring-2 focus:ring-[#c4a456]/20"
+                onChange={(e) => setFormData({...formData, faydaNumber: e.target.value})}
+              />
+              <input
+                type="text"
+                placeholder="Trade / Business License Number"
+                required={role === 'vendor'}
+                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-md text-sm outline-none focus:ring-2 focus:ring-[#c4a456]/20"
+                onChange={(e) => setFormData({...formData, licenseNumber: e.target.value})}
+              />
+            </div>
+          )}
 
           <button type="submit" disabled={isLocating || isSubmitting} className="w-full py-3 bg-[#c4a456] text-white font-semibold rounded-md disabled:opacity-70">
             {isLocating ? 'Synchronizing GPS...' : isSubmitting ? 'Creating account...' : `Register as ${role}`}

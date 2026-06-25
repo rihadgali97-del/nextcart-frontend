@@ -4,9 +4,21 @@ import { Shield, Award, Users, Terminal } from 'lucide-react';
 
 const About = () => {
   const corporatePillars = [
-    { icon: <Shield size={24} />, title: "Secure Escrow & Verification", description: "Vetting mechanisms ensure no ghost vendors operate profiles, establishing end-to-end user transparency." },
-    { icon: <Award size={24} />, title: "Dynamic Reputation Scoring", description: "Automated ranking matrices keep tracks of store parameters like cancellation rates and review parameters." },
-    { icon: <Users size={24} />, title: "TriNova Technology Brand", description: "Architected natively by our co-founding core team to redefine commercial web applications scale." },
+    { 
+      icon: <Shield size={24} />, 
+      title: "Secure Multi-Vendor Ecosystem", 
+      description: "Rigorous vendor onboarding and verification protocols eliminate fraudulent listings, ensuring marketplace integrity, catalog transparency, and consumer trust." 
+    },
+    { 
+      icon: <Award size={24} />, 
+      title: "Performance & Reputation Matrix", 
+      description: "Data-driven merchant grading engines evaluate fulfillment efficiency, return behavior, and review metrics to surface top-tier vendors automatically." 
+    },
+    { 
+      icon: <Users size={24} />, 
+      title: "Democratic B2C Commerce", 
+      description: "Eliminating intermediate supply chain operational friction to connect independent merchants directly with customers through optimal transactional pipelines." 
+    },
   ];
 
   return (
@@ -14,19 +26,19 @@ const About = () => {
       <section className="max-w-7xl mx-auto px-6 py-16 grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
         <div>
           <SectionHeader 
-            tag="Who We Are" 
-            title="Building Next-Gen Architectures For E-Commerce Scaling" 
-            subtitle="NextCart is an enterprise-level multi-vendor marketplace designed to remove intermediate operational frictions between independent merchants and direct consumers." 
+            tag="Platform Overview" 
+            title="Next-Generation Architecture for Scalable Digital Commerce" 
+            subtitle="NextCart is a high-performance, multi-vendor marketplace designed to streamline transactions and remove operational inefficiencies between independent brands and customers." 
           />
           <p className="text-slate-500 text-sm leading-relaxed mb-6 font-medium">
-            Built using Node.js, React, and MongoDB, this platform empowers vendors with an automated interface to list, manage orders, and check security metrics while providing customers with a fluid, high-speed buying workflow.
+            The platform delivers robust, role-based management interfaces tailored specifically for administrators, vendors, and buyers. Merchants enjoy automated toolkits to handle inventories, track order processing, and analyze store metrics, while consumers experience fluid, secure workflows from localized catalog indexing to final checkout.
           </p>
         </div>
         <div className="bg-slate-50 rounded-[3.5rem] p-12 border border-slate-100 relative">
           <Terminal size={40} className="text-[#0f2a29] mb-6" />
-          <h4 className="text-xl font-bold text-slate-800 mb-2">Engineered with Precision</h4>
+          <h4 className="text-xl font-bold text-slate-800 mb-2">Enterprise-Grade Security</h4>
           <p className="text-sm text-slate-500 leading-relaxed font-medium">
-            From modern password encryption handshakes via bcrypt to dynamic global states, the underlying source architecture emphasizes maintainable structure.
+            From advanced multi-layer encryption handshakes and tokenized session protections to state-driven user interfaces, the underlying architecture emphasizes system modularity, total resource optimization, and a highly resilient digital infrastructure.
           </p>
         </div>
       </section>
@@ -34,7 +46,7 @@ const About = () => {
       {/* Grid Features Structure Layout */}
       <section className="bg-[#f8fafc] py-24 px-6 rounded-t-[5rem]">
         <div className="max-w-7xl mx-auto">
-          <SectionHeader tag="Core Infrastructure" title="The Pillars of NextCart" alignment="center" />
+          <SectionHeader tag="Core Infrastructure" title="The Structural Pillars of NextCart" alignment="center" />
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-4">
             {corporatePillars.map((pillar, i) => (
               <div key={i} className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm hover:shadow-xl transition-all duration-300">

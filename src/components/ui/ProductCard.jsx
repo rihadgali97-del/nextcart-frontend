@@ -1,8 +1,12 @@
-import React from 'react';
-import { Star, ShieldCheck, ArrowUpRight, ShoppingBag } from 'lucide-react';
+import React, { useState } from 'react';
+import { Star, ShieldCheck, ArrowUpRight } from 'lucide-react';
 
 const ProductCard = ({ product }) => {
-  const { name, price, category, averageRating, isVerified, image, vendorName, vendor } = product;
+  const { name, price, category, averageRating, isVerified, image, images, colors, vendorName, vendor } = product;
+  
+  // Track which color image variation is actively displayed
+  const [activeImgIndex, setActiveImgIndex] = useState(0);
+
   const categoryLabel = category && typeof category === 'object' ? category.name || category._id : category;
   const vendorLabel = vendorName && typeof vendorName === 'string'
     ? vendorName
@@ -13,12 +17,13 @@ const ProductCard = ({ product }) => {
       {/* Product Image Area */}
       <div className="relative w-full h-56 bg-slate-50 rounded-[1.8rem] overflow-hidden mb-5">
         <img 
-          src={image || "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=600&auto=format&fit=crop&q=60"} 
+          // Prioritize our newly seeded slide images, then fall back to single image property
+          src={(images && images.length > 0) ? images[activeImgIndex] : (image || "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=600&auto=format&fit=crop&q=60")} 
           alt={name}
           className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
         />
         {isVerified && (
-          <div className="absolute top-4 left-4 bg-[#0f2a29] text-[#c4a456] text-[11px] font-bold tracking-wide px-3 py-1.5 rounded-full flex items-center gap-1 shadow-md uppercase">
+          <div className="absolute top-4 left-4 bg-[#0f2a29] text-[#c4a456] text-[11px] font-bold tracking-wide px-3 py-1.5 rounded-full flex items-center gap-1 shadow-md uppercase z-10">
             <ShieldCheck size={13} />
             <span>Verified Vendor</span>
           </div>
@@ -40,18 +45,41 @@ const ProductCard = ({ product }) => {
       </div>
 
       {/* Title & Vendor Name */}
-      <div className="mb-4 px-1">
+      <div className="mb-2 px-1">
         <h3 className="text-lg font-bold text-slate-800 line-clamp-1 group-hover:text-[#0f2a29] transition-colors">
           {name}
         </h3>
         <p className="text-xs text-slate-400 mt-0.5">by {vendorLabel}</p>
       </div>
 
+      {/* Dynamic Interactive Color Variant Nodes */}
+      {colors && colors.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 px-1 mb-4 items-center">
+          <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mr-1">Colors:</span>
+          {colors.map((color, idx) => (
+            <button
+              key={color}
+              onClick={(e) => {
+                e.stopPropagation(); // Stop navigation triggering if card has click actions
+                setActiveImgIndex(idx);
+              }}
+              className={`text-[10px] px-2.5 py-0.5 rounded-full font-bold border transition-all ${
+                activeImgIndex === idx 
+                  ? 'border-[#c4a456] bg-[#c4a456]/10 text-[#0f2a29]' 
+                  : 'border-slate-100 bg-slate-50 text-slate-500 hover:border-slate-200'
+              }`}
+            >
+              {color}
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* Pricing & Call-To-Action Footer */}
       <div className="mt-auto pt-4 border-t border-slate-50 flex items-center justify-between px-1">
         <div>
           <p className="text-[10px] uppercase tracking-wider text-slate-400 font-bold">Price</p>
-          <p className="text-xl font-black text-[#0f2a29]">{price} <span className="text-xs font-bold text-[#c4a456]">ETB</span></p>
+          <p className="text-xl font-black text-[#0f2a29]">{price?.toLocaleString()} <span className="text-xs font-bold text-[#c4a456]">ETB</span></p>
         </div>
         <button className="w-11 h-11 bg-slate-50 text-[#0f2a29] rounded-2xl flex items-center justify-center transition-all duration-300 group-hover:bg-[#c4a456] group-hover:text-white shadow-sm group-hover:shadow-[#c4a456]/30">
           <ArrowUpRight size={20} />

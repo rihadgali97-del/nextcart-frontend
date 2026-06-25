@@ -1,0 +1,12 @@
+{
+  "navbar": {
+    "home": "ዋና ገጽ",
+    "about": "ስለ እኛ",
+    "services": "አገልግሎቶች",
+    "searchPlaceholder": "ምርቶችን ይፈልጉ",
+    "searchBtn": "ፈልግ",
+    "dashboard": "ዳሽቦርድ",
+    "signIn": "ግባ",
+    "join": "NextCartን ይቀላቀሉ"
+  }
+}

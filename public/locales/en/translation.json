@@ -1,0 +1,12 @@
+{
+  "navbar": {
+    "home": "Home",
+    "about": "About",
+    "services": "Services",
+    "searchPlaceholder": "Search products",
+    "searchBtn": "Search",
+    "dashboard": "Dashboard",
+    "signIn": "Sign In",
+    "join": "Join NextCart"
+  }
+}

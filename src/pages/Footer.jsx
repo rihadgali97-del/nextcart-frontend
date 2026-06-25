@@ -12,6 +12,7 @@ import {
   Store,
   Truck,
   Twitter,
+  Globe, // ◄ Imported for Sematha web representation icon
 } from 'lucide-react';
 import Logo from '../components/common/Logo';
 
@@ -50,6 +51,7 @@ const Footer = () => {
     { icon: Instagram, label: 'Instagram', href: 'https://instagram.com' },
     { icon: Twitter, label: 'Twitter', href: 'https://twitter.com' },
     { icon: Linkedin, label: 'LinkedIn', href: 'https://linkedin.com/in/rihad-gali-06b973376' },
+    { icon: Globe, label: 'Sematha', href: 'https://www.sematha.com/' }, // ◄ Added inline here
   ];
 
   return (

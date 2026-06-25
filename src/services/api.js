@@ -81,8 +81,10 @@ export const deleteReview = (id) => API.delete(`/reviews/${id}`);
 
 // --- GEOSPATIAL TRUST SEARCH ---
 export const executeTrustWeightedSearch = (params) => API.get('/search', { params });
-export const searchProducts = ({ q, lat, lng, page = 1, limit = 12, sort } = {}) => API.get('/products/search', {
-  params: { q, lat, lng, page, limit, sort }
+
+// FIX: Added category parameter handling to enable clean dynamic item filtering on Home and Search views
+export const searchProducts = ({ q, category, lat, lng, page = 1, limit = 12, sort } = {}) => API.get('/products/search', {
+  params: { q, category, lat, lng, page, limit, sort }
 });
 
 export default API;
