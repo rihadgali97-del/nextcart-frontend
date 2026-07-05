@@ -41,7 +41,7 @@ export const updateOrderStatus = (id, status) => API.put(`/orders/${id}/status`,
 export const getVendorInventory = (page = 1) => API.get(`/vendors/products?page=${page}`);
 export const getVendorWallet = () => API.get('/vendors/wallet');
 export const addProduct = (productData) => API.post('/vendors/products', productData);
-
+export const withdrawVendorFunds = (payload) => API.post('/vendors/wallet/withdraw', payload);
 // --- ADMIN MODULE ---
 export const getAdminStats = () => API.get('/admin/dashboard');
 export const getAdminUsers = (page = 1) => API.get(`/admin/users?page=${page}`);
