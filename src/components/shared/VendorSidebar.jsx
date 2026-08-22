@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   LayoutDashboard, Package, ShoppingCart, Wallet, 
   Settings, LogOut, Star, ShieldCheck, MessageSquare,
@@ -6,8 +6,10 @@ import {
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import nextCartLogo from '../../assets/nextcart-logo.png';
+import VendorToast from './VendorToast';
 
 const VendorSidebar = ({ isCollapsed, setIsCollapsed }) => {
+  const [toast, setToast] = useState(null);
   const navigate = useNavigate();
   const location = useLocation();
   const user = JSON.parse(localStorage.getItem('user') || '{}');
@@ -22,13 +24,25 @@ const VendorSidebar = ({ isCollapsed, setIsCollapsed }) => {
     { id: 7, icon: Settings,        label: 'Settings',       path: '/settings' },
   ];
 
+  const requestLogout = () => {
+    setToast({ message: 'Are you sure you want to log out?', isConfirmation: true });
+  };
+
   const handleLogout = () => {
     localStorage.clear();
-    navigate('/login');
+    setToast({ message: 'You have been logged out successfully.' });
+    setTimeout(() => navigate('/login'), 900);
   };
 
   return (
-    <aside className={`bg-[#0f2a29] min-h-screen flex flex-col p-4 text-white border-r border-white/5 sticky top-0 transition-all duration-300 ease-in-out ${isCollapsed ? 'w-[88px]' : 'w-72'}`}>
+    <>
+      <VendorToast
+        message={toast?.message}
+        isConfirmation={toast?.isConfirmation}
+        onConfirm={handleLogout}
+        onCancel={() => setToast(null)}
+      />
+      <aside className={`bg-[#0f2a29] min-h-screen flex flex-col p-4 text-white border-r border-white/5 sticky top-0 transition-all duration-300 ease-in-out ${isCollapsed ? 'w-[88px]' : 'w-72'}`}>
 
       {/* Logo + Toggle */}
       <div className="flex items-center justify-between mb-8 px-2 min-h-[52px]">
@@ -131,7 +145,7 @@ const VendorSidebar = ({ isCollapsed, setIsCollapsed }) => {
 
         {/* Logout */}
         <button
-          onClick={handleLogout}
+          onClick={requestLogout}
           title={isCollapsed ? 'Log Out' : ''}
           className={`w-full flex items-center justify-center gap-2 py-3 bg-[#c4a456]/10 text-[#c4a456] text-[10px] font-black rounded-2xl hover:bg-red-500 hover:text-white transition-all uppercase tracking-wider`}
         >
@@ -145,7 +159,8 @@ const VendorSidebar = ({ isCollapsed, setIsCollapsed }) => {
           </p>
         )}
       </div>
-    </aside>
+      </aside>
+    </>
   );
 };
 
