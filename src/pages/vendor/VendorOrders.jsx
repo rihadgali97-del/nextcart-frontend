@@ -1,9 +1,10 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { getVendorOrders, updateOrderStatus } from '../../services/api';
+import VendorDeliveryMap from './VendorDeliveryMap';
 import {
   Package, Search, TrendingUp, CheckCircle, DollarSign,
   BarChart3, ChevronRight, X, MapPin, User, Mail,
-  CreditCard, ShoppingBag, RefreshCw, Clock, XCircle
+  CreditCard, ShoppingBag, RefreshCw, Clock, XCircle, Navigation
 } from 'lucide-react';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid,
@@ -28,6 +29,7 @@ export default function VendorOrders() {
   const [activeTab,     setActiveTab]     = useState('all');
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [updating,      setUpdating]      = useState(false);
+  const [mapOrder,      setMapOrder]      = useState(null); // order shown in delivery map
 
   useEffect(() => { fetchOrders(); }, []);
 
@@ -46,7 +48,7 @@ export default function VendorOrders() {
     try {
       await updateOrderStatus(orderId, newStatus);
       setOrders(prev => prev.map(o => o._id===orderId ? {...o,status:newStatus} : o));
-      if (selectedOrder?._id === orderId) setSelectedOrder(p=>({...p,status:newStatus}));
+      if (selectedOrder?._id===orderId) setSelectedOrder(p=>({...p,status:newStatus}));
     } catch { alert('Failed to update status'); }
     finally { setUpdating(false); }
   };
@@ -60,11 +62,11 @@ export default function VendorOrders() {
   }), [orders, searchQuery, activeTab]);
 
   const stats = useMemo(() => {
-    const totalRevenue  = orders.filter(o=>o.status==='delivered').reduce((a,o)=>a+(o.totalPrice||0),0);
-    const delivered     = orders.filter(o=>o.status==='delivered').length;
-    const pending       = orders.filter(o=>['pending','processing'].includes(o.status)).length;
-    const cancelled     = orders.filter(o=>o.status==='cancelled').length;
-    const distribution  = [
+    const totalRevenue = orders.filter(o=>o.status==='delivered').reduce((a,o)=>a+(o.totalPrice||0),0);
+    const delivered    = orders.filter(o=>o.status==='delivered').length;
+    const pending      = orders.filter(o=>['pending','processing'].includes(o.status)).length;
+    const cancelled    = orders.filter(o=>o.status==='cancelled').length;
+    const distribution = [
       { name:'Delivered', value:delivered, color:'#22c55e' },
       { name:'Pending',   value:pending,   color:'#f59e0b' },
       { name:'Cancelled', value:cancelled, color:'#ef4444' },
@@ -106,8 +108,6 @@ export default function VendorOrders() {
 
       {/* Analytics */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-        {/* Area chart */}
         <div className="lg:col-span-2 bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-2">
@@ -138,8 +138,6 @@ export default function VendorOrders() {
             </ResponsiveContainer>
           </div>
         </div>
-
-        {/* Status distribution */}
         <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm flex flex-col">
           <div className="flex items-center gap-2 mb-4">
             <BarChart3 size={18} style={{ color:C.gold }}/>
@@ -170,19 +168,17 @@ export default function VendorOrders() {
         </div>
       </div>
 
-      {/* Table */}
+      {/* Orders table */}
       <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden">
-        {/* Tabs */}
         <div className="flex border-b border-slate-100 px-6 overflow-x-auto bg-slate-50/50">
           {tabs.map(t=>(
             <button key={t} onClick={()=>setActiveTab(t)}
               className={`py-4 px-4 text-[10px] font-black uppercase tracking-widest transition-all border-b-2 whitespace-nowrap
-                ${activeTab===t ? 'border-[#c4a456] text-[#c4a456]' : 'border-transparent text-slate-400 hover:text-slate-600'}`}>
+                ${activeTab===t?'border-[#c4a456] text-[#c4a456]':'border-transparent text-slate-400 hover:text-slate-600'}`}>
               {t}
             </button>
           ))}
         </div>
-
         <div className="overflow-x-auto">
           <table className="w-full text-left">
             <thead>
@@ -193,14 +189,14 @@ export default function VendorOrders() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
-              {filteredOrders.length===0 ? (
+              {filteredOrders.length===0?(
                 <tr><td colSpan="5" className="p-16 text-center">
                   <Package size={40} className="mx-auto mb-3 text-slate-200"/>
                   <p className="font-bold text-slate-300 text-sm">No orders found</p>
                 </td></tr>
-              ) : filteredOrders.map(order=>{
-                const ss = sStyle(order.status);
-                return (
+              ):filteredOrders.map(order=>{
+                const ss=sStyle(order.status);
+                return(
                   <tr key={order._id} onClick={()=>setSelectedOrder(order)}
                     className="hover:bg-slate-50/80 transition-all group cursor-pointer">
                     <td className="p-5">
@@ -214,7 +210,7 @@ export default function VendorOrders() {
                             #{order._id?.slice(-6).toUpperCase()}
                           </p>
                           <p className="text-[10px] text-slate-400 font-mono">
-                            {order.createdAt ? new Date(order.createdAt).toLocaleDateString() : '—'}
+                            {order.createdAt?new Date(order.createdAt).toLocaleDateString():'—'}
                           </p>
                         </div>
                       </div>
@@ -247,9 +243,9 @@ export default function VendorOrders() {
       </div>
 
       {/* Order Detail Modal */}
-      {selectedOrder && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white w-full max-w-4xl max-h-[90vh] rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col md:flex-row animate-in zoom-in-95 duration-200">
+      {selectedOrder&&(
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+          <div className="bg-white w-full max-w-4xl max-h-[90vh] rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col md:flex-row">
 
             {/* Left: Customer info */}
             <div className="w-full md:w-72 bg-slate-50 p-7 border-r border-slate-100 space-y-7 overflow-y-auto flex-shrink-0">
@@ -258,25 +254,17 @@ export default function VendorOrders() {
                   style={{ background:sStyle(selectedOrder.status).bg, color:sStyle(selectedOrder.status).color }}>
                   {selectedOrder.status}
                 </span>
-                <button onClick={()=>setSelectedOrder(null)} className="md:hidden text-slate-400">
-                  <X size={18}/>
-                </button>
+                <button onClick={()=>setSelectedOrder(null)} className="md:hidden text-slate-400"><X size={18}/></button>
               </div>
               <div>
                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Customer</p>
                 <div className="space-y-3">
                   <div className="flex items-center gap-3">
-                    <div className="p-2 bg-white rounded-xl shadow-sm" style={{ color:C.gold }}>
-                      <User size={15}/>
-                    </div>
-                    <p className="font-bold text-sm" style={{ color:C.dark }}>
-                      {selectedOrder.user?.name||'Guest'}
-                    </p>
+                    <div className="p-2 bg-white rounded-xl shadow-sm" style={{ color:C.gold }}><User size={15}/></div>
+                    <p className="font-bold text-sm" style={{ color:C.dark }}>{selectedOrder.user?.name||'Guest'}</p>
                   </div>
                   <div className="flex items-center gap-3">
-                    <div className="p-2 bg-white rounded-xl shadow-sm text-slate-400">
-                      <Mail size={15}/>
-                    </div>
+                    <div className="p-2 bg-white rounded-xl shadow-sm text-slate-400"><Mail size={15}/></div>
                     <p className="text-xs text-slate-500 truncate">{selectedOrder.user?.email||'—'}</p>
                   </div>
                 </div>
@@ -284,9 +272,7 @@ export default function VendorOrders() {
               <div>
                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Shipping To</p>
                 <div className="flex gap-3">
-                  <div className="p-2 bg-white rounded-xl shadow-sm text-slate-400 h-fit">
-                    <MapPin size={15}/>
-                  </div>
+                  <div className="p-2 bg-white rounded-xl shadow-sm text-slate-400 h-fit"><MapPin size={15}/></div>
                   <p className="text-xs leading-relaxed text-slate-500">
                     {selectedOrder.shippingAddress?.address||'—'},{' '}
                     {selectedOrder.shippingAddress?.city||'—'},{' '}
@@ -294,6 +280,16 @@ export default function VendorOrders() {
                   </p>
                 </div>
               </div>
+
+              {/* ── VIEW ON MAP button ── */}
+              <button
+                onClick={()=>{ setSelectedOrder(null); setMapOrder(selectedOrder); }}
+                className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl font-black text-sm transition-all"
+                style={{ background:C.dark, color:C.gold }}>
+                <Navigation size={16}/>
+                View Customer on Map
+              </button>
+
               <div className="border-t border-slate-200 pt-5">
                 <div className="flex justify-between items-center bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
                   <span className="text-[10px] font-black text-slate-400 uppercase">Total</span>
@@ -304,13 +300,13 @@ export default function VendorOrders() {
                 <div className="flex justify-between items-center mt-3 px-1">
                   <span className="text-[10px] font-black text-slate-400 uppercase">Payment</span>
                   <span className={`text-xs font-black uppercase ${selectedOrder.isPaid?'text-emerald-600':'text-amber-600'}`}>
-                    {selectedOrder.isPaid ? '✓ Paid' : '⏳ Pending'}
+                    {selectedOrder.isPaid?'✓ Paid':'⏳ Pending'}
                   </span>
                 </div>
               </div>
             </div>
 
-            {/* Right: Items + status */}
+            {/* Right: Items + status update */}
             <div className="flex-1 flex flex-col min-h-0 bg-white">
               <div className="p-7 border-b border-slate-100 flex items-center justify-between">
                 <div>
@@ -318,8 +314,8 @@ export default function VendorOrders() {
                     Order #{selectedOrder._id?.slice(-6).toUpperCase()}
                   </h2>
                   <p className="text-xs text-slate-400 mt-0.5">
-                    {selectedOrder.createdAt ? new Date(selectedOrder.createdAt).toLocaleDateString('en-US',
-                      { month:'long', day:'numeric', year:'numeric' }) : '—'}
+                    {selectedOrder.createdAt?new Date(selectedOrder.createdAt).toLocaleDateString('en-US',
+                      { month:'long', day:'numeric', year:'numeric' }):'—'}
                   </p>
                 </div>
                 <button onClick={()=>setSelectedOrder(null)}
@@ -327,18 +323,16 @@ export default function VendorOrders() {
                   <X size={20}/>
                 </button>
               </div>
-
               <div className="flex-1 overflow-y-auto p-7 space-y-3">
                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">
                   Items ({selectedOrder.orderItems?.length||0})
                 </p>
                 {selectedOrder.orderItems?.map((item,i)=>(
-                  <div key={i}
-                    className="flex items-center gap-4 p-4 rounded-2xl border border-slate-50 hover:border-[#c4a456]/30 hover:bg-amber-50/20 transition-all">
+                  <div key={i} className="flex items-center gap-4 p-4 rounded-2xl border border-slate-50 hover:border-[#c4a456]/30 hover:bg-amber-50/20 transition-all">
                     <div className="w-14 h-14 bg-slate-100 rounded-xl overflow-hidden flex items-center justify-center flex-shrink-0">
                       {item.image
-                        ? <img src={item.image} alt={item.name} className="w-full h-full object-cover"/>
-                        : <ShoppingBag size={18} className="text-slate-300"/>}
+                        ?<img src={item.image} alt={item.name} className="w-full h-full object-cover"/>
+                        :<ShoppingBag size={18} className="text-slate-300"/>}
                     </div>
                     <div className="flex-1">
                       <p className="font-bold text-sm" style={{ color:C.dark }}>{item.name}</p>
@@ -353,11 +347,8 @@ export default function VendorOrders() {
                   </div>
                 ))}
               </div>
-
-              {/* Status control */}
               <div className="p-6 border-t border-slate-100">
-                <div className="p-4 rounded-2xl flex items-center justify-between gap-4"
-                  style={{ background:C.dark }}>
+                <div className="p-4 rounded-2xl flex items-center justify-between gap-4" style={{ background:C.dark }}>
                   <div className="flex items-center gap-3">
                     <div className="p-2 rounded-xl" style={{ background:'rgba(255,255,255,.08)' }}>
                       <CreditCard size={17} style={{ color:C.gold }}/>
@@ -380,6 +371,15 @@ export default function VendorOrders() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Delivery Map Modal */}
+      {mapOrder&&(
+        <VendorDeliveryMap
+          order={mapOrder}
+          vendorLocation={mapOrder?.orderItems?.[0]?.vendor?.location}
+          onClose={()=>setMapOrder(null)}
+        />
       )}
     </div>
   );
