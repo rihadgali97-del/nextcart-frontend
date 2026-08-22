@@ -100,7 +100,7 @@ const Home = () => {
           
           <div className="space-y-6 text-left">
             <div className="inline-flex items-center gap-2 bg-white/5 border border-white/10 px-4 py-2 rounded-full text-xs text-[#c4a456] font-bold uppercase tracking-wider">
-              <Sparkles size={14} /> Next-Gen Multi-Vendor Platform
+              <Sparkles size={14} /> GebeyaPlus Multi-Vendor Platform
             </div>
             <h1 className="text-5xl md:text-7xl font-black tracking-tight leading-[1.05]">
               Your Premium <br/>Marketplace Hub

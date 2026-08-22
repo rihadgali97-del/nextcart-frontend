@@ -28,7 +28,7 @@ const About = () => {
           <SectionHeader 
             tag="Platform Overview" 
             title="Next-Generation Architecture for Scalable Digital Commerce" 
-            subtitle="NextCart is a high-performance, multi-vendor marketplace designed to streamline transactions and remove operational inefficiencies between independent brands and customers." 
+            subtitle="GebeyaPlus is a high-performance, multi-vendor marketplace designed to streamline transactions and remove operational inefficiencies between independent brands and customers." 
           />
           <p className="text-slate-500 text-sm leading-relaxed mb-6 font-medium">
             The platform delivers robust, role-based management interfaces tailored specifically for administrators, vendors, and buyers. Merchants enjoy automated toolkits to handle inventories, track order processing, and analyze store metrics, while consumers experience fluid, secure workflows from localized catalog indexing to final checkout.

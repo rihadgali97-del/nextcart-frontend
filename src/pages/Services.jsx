@@ -15,8 +15,8 @@ const Services = () => {
       <div className="max-w-7xl mx-auto px-6 py-16">
         <SectionHeader 
           tag="Platform Ecosystem" 
-          title="What NextCart Provides" 
-          subtitle="Explore the systemic modules fully integrated into NextCart's full-stack codebase structure."
+          title="What GebeyaPlus Provides" 
+          subtitle="Explore the systemic modules fully integrated into GebeyaPlus's full-stack codebase structure."
           alignment="center"
         />
 

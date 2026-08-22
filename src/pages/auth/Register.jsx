@@ -149,7 +149,7 @@ const Register = () => {
 
         <div className="text-center mb-6">
           <h1 className="text-2xl font-bold text-slate-900">Create Account</h1>
-          <p className="text-sm text-slate-500">Join NextCart — create your account</p>
+          <p className="text-sm text-slate-500">Join GebeyaPlus — create your account</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -193,7 +193,7 @@ const Register = () => {
             </button>
           </div>
 
-          {/* 🛠️ NEW: Conditionally rendered fields for Vendors */}
+          {/* Conditionally rendered fields for Vendors */}
           {role === 'vendor' && (
             <div className="space-y-4 pt-1 border-t border-slate-100 animate-fadeIn">
               <p className="text-xs font-semibold text-slate-500 tracking-wide uppercase">Verification Details</p>

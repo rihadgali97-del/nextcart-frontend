@@ -420,12 +420,15 @@ export default function AdminDashboard() {
     finally { setLoad("vendors", false); }
   }, []);
 
-  const loadProducts = useCallback(async () => {
+const loadProducts = useCallback(async () => {
     setLoad("products", true);
-    try { const { data } = await getAdminProducts(); setProducts(data.data || []); }
+    try { 
+      const { data } = await getAdminProducts(); 
+      setProducts(data.products || data.data || []);
+    }
     catch { notify("Failed to load products", "error"); }
     finally { setLoad("products", false); }
-  }, []);
+}, []);
 
   const loadOrders = useCallback(async (p = 1) => {
     setLoad("orders", true);

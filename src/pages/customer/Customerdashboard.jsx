@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { io } from "socket.io-client";
 import nextCartLogo from "../../assets/nextcart-logo.png";
+import DeliveryMap from "./DeliveryMap";
 import API, {
   getUserProfile,
   updateProfile,
@@ -623,6 +624,7 @@ export default function CustomerDashboard() {
   const [orderFilter,   setOrderFilter]   = useState("all");
   const [orderSearch,   setOrderSearch]   = useState("");
   const [selectedOrder, setSelectedOrder] = useState(null);
+  const [trackingOrder, setTrackingOrder] = useState(null); // order being tracked on map
   useEffect(()=>{ setOrdersPage(1); },[orderFilter,orderSearch]);
   const filteredOrders = orders.filter(o=>{
     const ms=!orderSearch||o._id?.toLowerCase().includes(orderSearch.toLowerCase())||o.status?.toLowerCase().includes(orderSearch.toLowerCase());
@@ -1137,6 +1139,16 @@ export default function CustomerDashboard() {
                               💬 Message Vendor
                             </button>
                           )}
+                          {/* Track on map button — shown for active orders */}
+                          {["processing","shipped"].includes(o.status)&&(
+                            <button onClick={()=>setTrackingOrder(o)}
+                              style={{marginTop:8,width:"100%",padding:"9px 0",borderRadius:8,
+                                border:"none",background:C.green,color:"#fff",
+                                fontSize:12,fontWeight:700,cursor:"pointer",
+                                display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
+                              🗺 Track Live Delivery
+                            </button>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -1148,6 +1160,17 @@ export default function CustomerDashboard() {
           })()
         }
       </Panel>
+      {/* Live delivery map modal */}
+      {trackingOrder&&(
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.55)",zIndex:500,
+          display:"flex",alignItems:"center",justifyContent:"center",padding:20}}
+          onClick={()=>setTrackingOrder(null)}>
+          <div style={{width:"100%",maxWidth:720,maxHeight:"90vh",overflowY:"auto",borderRadius:14}}
+            onClick={e=>e.stopPropagation()}>
+            <DeliveryMap order={trackingOrder} onClose={()=>setTrackingOrder(null)}/>
+          </div>
+        </div>
+      )}
     </div>
   );
 

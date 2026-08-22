@@ -52,7 +52,7 @@ const Sidebar = () => {
       {/* Branding */}
       <div className="flex items-center gap-3 mb-12 px-2">
         <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-ncTeal font-bold text-xl shadow-lg">N</div>
-        <span className="text-2xl font-bold tracking-tight">NextCart</span>
+        <span className="text-2xl font-bold tracking-tight">GebeyaPlus</span>
       </div>
 
       {/* Conditional Menu Rendering */}
@@ -112,7 +112,7 @@ const Sidebar = () => {
     </button>
   </div>
   <p className="text-[8px] text-center text-white/30 mt-4 uppercase tracking-widest">
-    NextCart v1.0 • 2026
+    GebeyaPlus v1.0 • 2026
   </p>
 </div>
     </aside>

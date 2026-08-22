@@ -32,7 +32,7 @@ const Footer = () => {
     {
       title: 'Company',
       links: [
-        { name: 'About NextCart', path: '/about' },
+        { name: 'About GebeyaPlus', path: '/about' },
         { name: 'Services', path: '/services' },
         { name: 'Customer Account', path: '/login' },
         { name: 'Vendor Access', path: '/login' },
@@ -64,7 +64,7 @@ const Footer = () => {
           <div className="space-y-6">
             <Logo lightText />
             <p className="max-w-md text-sm leading-6 text-white/62 font-medium">
-              NextCart connects buyers with verified vendors, reputation-aware discovery, and a commerce experience built for modern marketplace operations.
+              GebeyaPlus connects buyers with verified vendors, reputation-aware discovery, and a commerce experience built for modern marketplace operations.
             </p>
 
             <div className="grid gap-3 sm:grid-cols-3">
@@ -98,7 +98,7 @@ const Footer = () => {
             <div className="mt-5 space-y-4 text-sm text-white/64">
               <a href="mailto:support@nextcart.com" className="flex items-center gap-3 transition-colors hover:text-white">
                 <Mail size={17} className="text-[#c4a456]" />
-                support@nextcart.com
+                support@gebeyaplus.com
               </a>
               <a href="tel:+251911000000" className="flex items-center gap-3 transition-colors hover:text-white">
                 <Phone size={17} className="text-[#c4a456]" />
@@ -128,7 +128,7 @@ const Footer = () => {
         </div>
 
         <div className="mt-12 flex flex-col gap-4 border-t border-white/10 pt-6 text-xs text-white/45 md:flex-row md:items-center md:justify-between">
-          <p>Copyright {year} NextCart Marketplace. All rights reserved.</p>
+          <p>Copyright {year} GebeyaPlus Marketplace. All rights reserved.</p>
           <div className="flex flex-wrap gap-x-5 gap-y-2">
             <Link to="/services" className="hover:text-white transition-colors">Platform Terms</Link>
             <Link to="/about" className="hover:text-white transition-colors">Trust & Safety</Link>

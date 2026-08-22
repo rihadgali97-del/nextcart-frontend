@@ -15,7 +15,7 @@ const DashboardLayout = ({ children }) => {
         const parsedUser = JSON.parse(savedUser);
         setUser(parsedUser);
       } catch (error) {
-        console.error("NextCart Auth Error", error);
+        console.error("GebeyaPlus Auth Error", error);
         localStorage.removeItem('user');
       }
     }

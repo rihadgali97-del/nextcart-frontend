@@ -120,7 +120,7 @@ const AuthPage = ({ type = 'login' }) => {
             </form>
 
             <p className="text-center text-[10px] text-slate-400 mt-12 tracking-widest uppercase">
-              @ 2026 NextCart Setup
+              @ 2026 GebeyaPlus Setup
             </p>
           </div>
         </div>

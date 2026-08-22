@@ -20,7 +20,7 @@ const Logo = ({ className = "h-10", showText = true, lightText = false }) => {
         <span className={`font-sans text-xl font-black tracking-tight transition-colors ${
           lightText ? 'text-white' : 'text-slate-900'
         }`}>
-          next<span className="text-[#c4a456]">cart</span>
+          Gebeya<span className="text-[#c4a456]">Plus</span>
         </span>
       )}
     </div>
