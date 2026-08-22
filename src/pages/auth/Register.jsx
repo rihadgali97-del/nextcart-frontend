@@ -4,6 +4,7 @@ import { Eye, EyeOff } from 'lucide-react';
 import { GoogleLogin } from '@react-oauth/google';
 import { googleAuth, registerUser } from '../../services/api';
 import Logo from '../../components/common/Logo';
+import '../../styles/auth/register.css';
 
 const Register = () => {
   const [role, setRole] = useState('customer');
@@ -136,38 +137,38 @@ const Register = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 flex items-center justify-center p-6">
-      <div className="bg-white w-full max-w-md rounded-xl shadow-lg p-8">
-        <div className="mb-4">
+    <div className="auth-page">
+      <div className="auth-card">
+        <div className="auth-logo">
           <Logo className="h-10 mx-auto" showText={false} />
         </div>
 
-        <div className="flex justify-center gap-3 mb-4">
-          <button type="button" onClick={() => setRole('customer')} className={`px-3 py-2 rounded-md text-sm font-semibold ${role === 'customer' ? 'bg-[#c4a456] text-white' : 'bg-slate-50 text-slate-600'}`}>Customer</button>
-          <button type="button" onClick={() => setRole('vendor')} className={`px-3 py-2 rounded-md text-sm font-semibold ${role === 'vendor' ? 'bg-[#c4a456] text-white' : 'bg-slate-50 text-slate-600'}`}>Vendor</button>
+        <div className="auth-role-selector">
+          <button type="button" onClick={() => setRole('customer')} className={`auth-role-button ${role === 'customer' ? 'auth-role-button--active' : ''}`}>Customer</button>
+          <button type="button" onClick={() => setRole('vendor')} className={`auth-role-button ${role === 'vendor' ? 'auth-role-button--active' : ''}`}>Vendor</button>
         </div>
 
-        <div className="text-center mb-6">
-          <h1 className="text-2xl font-bold text-slate-900">Create Account</h1>
+        <div className="auth-header">
+          <h1 className="auth-title">Create Account</h1>
           <p className="text-sm text-slate-500">Join GebeyaPlus — create your account</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {error && <p className="text-red-500 text-xs font-medium bg-red-50 p-2 rounded">{error}</p>}
+        <form onSubmit={handleSubmit} className="auth-form">
+          {error && <p className="auth-alert auth-alert--error">{error}</p>}
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="auth-name-grid">
             <input
               type="text"
               placeholder="First name"
               required
-              className="w-full px-3 py-2 bg-white border border-slate-200 rounded-md text-sm outline-none focus:ring-2 focus:ring-[#c4a456]/20"
+              className="auth-input"
               onChange={(e) => setFormData({...formData, firstName: e.target.value})}
             />
             <input
               type="text"
               placeholder="Last name"
               required
-              className="w-full px-3 py-2 bg-white border border-slate-200 rounded-md text-sm outline-none focus:ring-2 focus:ring-[#c4a456]/20"
+              className="auth-input"
               onChange={(e) => setFormData({...formData, lastName: e.target.value})}
             />
           </div>
@@ -176,58 +177,56 @@ const Register = () => {
             type="email"
             placeholder="Email address"
             required
-            className="w-full px-3 py-2 bg-white border border-slate-200 rounded-md text-sm outline-none focus:ring-2 focus:ring-[#c4a456]/20"
+            className="auth-input"
             onChange={(e) => setFormData({...formData, email: e.target.value})}
           />
 
-          <div className="relative">
+          <div className="auth-input-group">
             <input
               type={showPassword ? "text" : "password"}
               placeholder="Password"
               required
-              className="w-full px-3 py-2 bg-white border border-slate-200 rounded-md text-sm outline-none focus:ring-2 focus:ring-[#c4a456]/20"
+              className="auth-input auth-input--with-right"
               onChange={(e) => setFormData({...formData, password: e.target.value})}
             />
-            <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-3 text-slate-400">
+            <button type="button" onClick={() => setShowPassword(!showPassword)} className="auth-password-toggle">
               {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
             </button>
           </div>
 
           {/* Conditionally rendered fields for Vendors */}
           {role === 'vendor' && (
-            <div className="space-y-4 pt-1 border-t border-slate-100 animate-fadeIn">
-              <p className="text-xs font-semibold text-slate-500 tracking-wide uppercase">Verification Details</p>
+            <div className="auth-vendor-fields">
+              <p className="auth-vendor-label">Verification Details</p>
               <input
                 type="text"
                 placeholder="National Fayda ID Number"
                 required={role === 'vendor'}
-                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-md text-sm outline-none focus:ring-2 focus:ring-[#c4a456]/20"
+                className="auth-input"
                 onChange={(e) => setFormData({...formData, faydaNumber: e.target.value})}
               />
               <input
                 type="text"
                 placeholder="Trade / Business License Number"
                 required={role === 'vendor'}
-                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-md text-sm outline-none focus:ring-2 focus:ring-[#c4a456]/20"
+                className="auth-input"
                 onChange={(e) => setFormData({...formData, licenseNumber: e.target.value})}
               />
             </div>
           )}
 
-          <button type="submit" disabled={isLocating || isSubmitting} className="w-full py-3 bg-[#c4a456] text-white font-semibold rounded-md disabled:opacity-70">
+          <button type="submit" disabled={isLocating || isSubmitting} className="auth-primary-button">
             {isLocating ? 'Synchronizing GPS...' : isSubmitting ? 'Creating account...' : `Register as ${role}`}
           </button>
         </form>
 
-        <div className="w-full flex flex-col items-center my-4">
-          <div className="relative flex items-center w-full max-w-xs">
-            <div className="flex-1 h-px bg-slate-200" />
-            <span className="px-3 text-xs text-slate-400">Or continue with</span>
-            <div className="flex-1 h-px bg-slate-200" />
-          </div>
+        <div className="auth-divider">
+          <div className="auth-divider-line" />
+          <span className="auth-divider-label">Or continue with</span>
+          <div className="auth-divider-line" />
         </div>
 
-        <div className="w-full flex justify-center mb-4">
+        <div className="auth-google">
           <GoogleLogin
             onSuccess={handleGoogleSuccess}
             onError={() => setError('Google Identity platform mapping aborted.')}
@@ -238,8 +237,8 @@ const Register = () => {
           />
         </div>
 
-        <p className="text-center text-sm text-slate-500">
-          Already have an account? <button onClick={() => navigate('/login')} className="text-[#0f2a29] font-semibold">Login</button>
+        <p className="auth-footer">
+          Already have an account? <button onClick={() => navigate('/login')} className="auth-link auth-link--dark">Login</button>
         </p>
       </div>
     </div>

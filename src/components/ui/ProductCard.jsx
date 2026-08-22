@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Star, ShieldCheck, ArrowUpRight } from 'lucide-react';
+import '../../styles/components/product-card.css';
 
 const ProductCard = ({ product }) => {
   const { name, price, category, averageRating, isVerified, image, images, colors, vendorName, vendor } = product;
@@ -13,49 +14,49 @@ const ProductCard = ({ product }) => {
     : vendor?.name || vendorName?.name || vendorName?.businessName || 'Elite Storefront';
 
   return (
-    <div className="group bg-white rounded-[2.5rem] border border-slate-100 p-5 transition-all duration-300 hover:shadow-2xl hover:shadow-slate-100 hover:-translate-y-1.5 flex flex-col h-full">
+    <div className="product-card">
       {/* Product Image Area */}
-      <div className="relative w-full h-56 bg-slate-50 rounded-[1.8rem] overflow-hidden mb-5">
+      <div className="product-card__media">
         <img 
           // Prioritize our newly seeded slide images, then fall back to single image property
           src={(images && images.length > 0) ? images[activeImgIndex] : (image || "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=600&auto=format&fit=crop&q=60")} 
           alt={name}
-          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+          className="product-card__image"
         />
         {isVerified && (
-          <div className="absolute top-4 left-4 bg-[#0f2a29] text-[#c4a456] text-[11px] font-bold tracking-wide px-3 py-1.5 rounded-full flex items-center gap-1 shadow-md uppercase z-10">
+          <div className="product-card__verified">
             <ShieldCheck size={13} />
             <span>Verified Vendor</span>
           </div>
         )}
         {(product.distanceInKm !== undefined || product.distance !== undefined) && (
-          <div className="absolute top-4 right-4 z-10 bg-white/95 backdrop-blur-sm text-slate-700 px-3 py-1 rounded-full text-xs font-bold shadow-sm">
+          <div className="product-card__distance">
             {product.distanceInKm !== undefined ? `${parseFloat(product.distanceInKm).toFixed(1)} km` : `${(product.distance / 1000).toFixed(1)} km`}
           </div>
         )}
       </div>
 
       {/* Meta Information */}
-      <div className="flex items-center justify-between text-xs text-slate-400 mb-2 font-medium px-1">
-        <span className="bg-slate-100 px-2.5 py-1 rounded-md text-slate-600 font-semibold">{categoryLabel}</span>
-        <div className="flex items-center gap-1">
-          <Star size={13} className="fill-amber-400 text-amber-400" />
-          <span className="text-slate-700 font-bold">{averageRating || "4.8"}</span>
+      <div className="product-card__meta">
+        <span className="product-card__category">{categoryLabel}</span>
+        <div className="product-card__rating">
+          <Star size={13} className="product-card__star" />
+          <span className="product-card__rating-value">{averageRating || "4.8"}</span>
         </div>
       </div>
 
       {/* Title & Vendor Name */}
-      <div className="mb-2 px-1">
-        <h3 className="text-lg font-bold text-slate-800 line-clamp-1 group-hover:text-[#0f2a29] transition-colors">
+      <div className="product-card__details">
+        <h3 className="product-card__name">
           {name}
         </h3>
-        <p className="text-xs text-slate-400 mt-0.5">by {vendorLabel}</p>
+        <p className="product-card__vendor">by {vendorLabel}</p>
       </div>
 
       {/* Dynamic Interactive Color Variant Nodes */}
       {colors && colors.length > 0 && (
-        <div className="flex flex-wrap gap-1.5 px-1 mb-4 items-center">
-          <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mr-1">Colors:</span>
+        <div className="product-card__colors">
+          <span className="product-card__colors-label">Colors:</span>
           {colors.map((color, idx) => (
             <button
               key={color}
@@ -63,11 +64,7 @@ const ProductCard = ({ product }) => {
                 e.stopPropagation(); // Stop navigation triggering if card has click actions
                 setActiveImgIndex(idx);
               }}
-              className={`text-[10px] px-2.5 py-0.5 rounded-full font-bold border transition-all ${
-                activeImgIndex === idx 
-                  ? 'border-[#c4a456] bg-[#c4a456]/10 text-[#0f2a29]' 
-                  : 'border-slate-100 bg-slate-50 text-slate-500 hover:border-slate-200'
-              }`}
+              className={`product-card__color ${activeImgIndex === idx ? 'product-card__color--active' : ''}`}
             >
               {color}
             </button>
@@ -76,12 +73,12 @@ const ProductCard = ({ product }) => {
       )}
 
       {/* Pricing & Call-To-Action Footer */}
-      <div className="mt-auto pt-4 border-t border-slate-50 flex items-center justify-between px-1">
+      <div className="product-card__footer">
         <div>
-          <p className="text-[10px] uppercase tracking-wider text-slate-400 font-bold">Price</p>
-          <p className="text-xl font-black text-[#0f2a29]">{price?.toLocaleString()} <span className="text-xs font-bold text-[#c4a456]">ETB</span></p>
+          <p className="product-card__price-label">Price</p>
+          <p className="product-card__price">{price?.toLocaleString()} <span className="product-card__currency">ETB</span></p>
         </div>
-        <button className="w-11 h-11 bg-slate-50 text-[#0f2a29] rounded-2xl flex items-center justify-center transition-all duration-300 group-hover:bg-[#c4a456] group-hover:text-white shadow-sm group-hover:shadow-[#c4a456]/30">
+        <button className="product-card__action">
           <ArrowUpRight size={20} />
         </button>
       </div>

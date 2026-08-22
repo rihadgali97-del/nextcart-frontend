@@ -1,0 +1,19 @@
+.chat-input { align-items: center; background: #fff; border-top: 1px solid #f1f5f9; display: flex; gap: .75rem; padding: 1rem; }
+.chat-input__attachment { color: #94a3b8; padding: .75rem; transition: color 150ms; }
+.chat-input__attachment:hover { color: #c4a456; }
+.chat-input__field { background: #f8fafc; border: 1px solid transparent; border-radius: 1rem; flex: 1; font-size: .875rem; font-weight: 700; outline: none; padding: .75rem 1.25rem; transition: all 150ms; }
+.chat-input__field:focus { border-color: #c4a456; }
+.chat-input__send { background: #0f2a29; border-radius: 1rem; box-shadow: 0 10px 15px -3px rgb(226 232 240); color: #fff; padding: .875rem; transition: all 150ms; }
+.chat-input__send:hover { background: #c4a456; }
+.chat-input__send:active { transform: scale(.95); }
+.chat-message { animation: chat-message-enter 300ms ease-out; display: flex; margin-bottom: 1rem; }
+.chat-message--own { justify-content: flex-end; }
+.chat-message--other { justify-content: flex-start; }
+.chat-message__bubble { border-radius: 1.5rem; box-shadow: 0 1px 2px rgb(0 0 0 / .05); font-size: .875rem; font-weight: 500; line-height: 1.625; max-width: 75%; padding: .75rem 1.25rem; }
+.chat-message__bubble--own { background: #c4a456; border-top-right-radius: 0; color: #fff; }
+.chat-message__bubble--other { background: #fff; border: 1px solid #f1f5f9; border-top-left-radius: 0; color: #0f2a29; }
+.chat-message__time { display: block; font-size: .5625rem; font-weight: 900; letter-spacing: -.025em; margin-top: .25rem; opacity: .7; text-transform: uppercase; }
+.chat-message__time--other { color: #94a3b8; }
+.chat-system-message { display: flex; justify-content: center; margin-block: 1.5rem; }
+.chat-system-message__label { background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 9999px; box-shadow: 0 1px 2px rgb(0 0 0 / .05); color: #64748b; font-size: .625rem; font-weight: 900; letter-spacing: .1em; padding: .5rem 1rem; text-transform: uppercase; }
+@keyframes chat-message-enter { from { opacity: 0; transform: translateY(.5rem); } to { opacity: 1; transform: translateY(0); } }

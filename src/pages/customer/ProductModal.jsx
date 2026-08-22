@@ -3,7 +3,7 @@ import API from "../../services/api";
 import { C, avatarColor } from "./constants";
 import { ago } from "./helpers";
 import { Avatar, Stars, Spinner } from "./UI";
-import "./dashboard.css";
+import "../../styles/customer/dashboard.css";
 
 // ─── Product detail modal (image, price, description, reviews, message vendor) ─
 export default function ProductModal({ product, onClose, onAddToCart, addingToCart, onMessageVendor }) {

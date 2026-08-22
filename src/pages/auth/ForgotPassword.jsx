@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Mail } from 'lucide-react';
 import { forgotPassword } from '../../services/api';
 import Logo from '../../components/common/Logo';
+import '../../styles/auth/forgot-password.css';
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState('');
@@ -32,34 +33,34 @@ const ForgotPassword = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 flex items-center justify-center p-6">
-      <div className="bg-white w-full max-w-md rounded-xl shadow-lg p-8">
-        <div className="mb-4">
+    <div className="auth-page">
+      <div className="auth-card">
+        <div className="auth-logo">
           <Logo className="h-10 mx-auto" showText={false} />
         </div>
 
-        <div className="text-center mb-6">
-          <h1 className="text-2xl font-bold text-slate-900">Reset Password</h1>
-          <p className="text-sm text-slate-500">Enter your email and we will send a secure reset link.</p>
+        <div className="auth-header">
+          <h1 className="auth-title">Reset Password</h1>
+          <p className="auth-description">Enter your email and we will send a secure reset link.</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {error && <p className="text-red-500 text-xs font-medium bg-red-50 p-2 rounded">{error}</p>}
-          {message && <p className="text-emerald-700 text-xs font-medium bg-emerald-50 p-2 rounded">{message}</p>}
+        <form onSubmit={handleSubmit} className="auth-form">
+          {error && <p className="auth-alert auth-alert--error">{error}</p>}
+          {message && <p className="auth-alert auth-alert--success">{message}</p>}
 
-          <div className="relative">
-            <Mail className="absolute left-3 top-3 text-slate-400" size={18} />
+          <div className="auth-input-group">
+            <Mail className="auth-input-icon" size={18} />
             <input
               type="email"
               placeholder="Email address"
               required
               value={email}
-              className="w-full pl-10 pr-3 py-3 bg-white border border-slate-200 rounded-md text-sm outline-none focus:ring-2 focus:ring-[#c4a456]/20"
+              className="auth-input auth-input--with-left"
               onChange={(e) => setEmail(e.target.value)}
             />
           </div>
 
-          <button type="submit" disabled={isSubmitting} className="w-full py-3 bg-[#c4a456] text-white font-semibold rounded-md disabled:opacity-70">
+          <button type="submit" disabled={isSubmitting} className="auth-primary-button">
             {isSubmitting ? 'Sending reset link...' : 'Send Reset Link'}
           </button>
         </form>
@@ -67,7 +68,7 @@ const ForgotPassword = () => {
         <button
           type="button"
           onClick={() => navigate('/login')}
-          className="mt-5 w-full inline-flex items-center justify-center gap-2 text-sm text-slate-500 hover:text-[#0f2a29]"
+          className="auth-back-link"
         >
           <ArrowLeft size={16} />
           Back to sign in

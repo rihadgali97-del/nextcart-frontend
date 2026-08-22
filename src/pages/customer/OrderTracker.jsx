@@ -1,5 +1,5 @@
 import { C } from "./constants";
-import "./dashboard.css";
+import "../../styles/customer/dashboard.css";
 
 // ─── Order progress tracker (pending → processing → shipped → delivered) ──────
 export default function OrderTracker({ status }) {

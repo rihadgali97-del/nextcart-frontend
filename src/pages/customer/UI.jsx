@@ -1,5 +1,5 @@
 import { C, STATUS, avatarColor, ITEMS_PER_PAGE } from "./constants";
-import "./dashboard.css";
+import "../../styles/customer/dashboard.css";
 
 // ─── Status pill (order status badge) ──────────────────────────────────────────
 export const Pill = ({ label }) => {

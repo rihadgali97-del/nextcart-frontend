@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import AdminSidebar from '../shared/AdminSidebar';
 import VendorSidebar from '../shared/VendorSidebar';
 import Sidebar from '../shared/Sidebar';
+import '../../styles/layouts/dashboard-layout.css';
 
 const DashboardLayout = ({ children }) => {
   const [user, setUser] = useState(null);
@@ -23,7 +24,7 @@ const DashboardLayout = ({ children }) => {
   }, []);
 
   const renderSidebar = () => {
-    if (isInitializing) return <div className="w-20 bg-[#0f2a29] min-h-screen animate-pulse" />;
+    if (isInitializing) return <div className="dashboard-layout__loading-sidebar" />;
 
     const role = user?.role?.toLowerCase();
     
@@ -41,13 +42,13 @@ const DashboardLayout = ({ children }) => {
   };
 
   return (
-    <div className="flex bg-ncBg min-h-screen transition-all duration-500 ease-in-out overflow-hidden">
+    <div className="dashboard-layout">
       {/* 1. Dynamic Navigation */}
       {renderSidebar()}
       
       {/* 2. Content Area - Width adjusts automatically because of flex-1 */}
-      <div className="flex-1 h-screen overflow-y-auto scroll-smooth bg-[#f8fafb]">
-        <div className="p-8 animate-in fade-in zoom-in-95 duration-700">
+      <div className="dashboard-layout__content">
+        <div className="dashboard-layout__page">
           {children}
         </div>
       </div>

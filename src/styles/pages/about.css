@@ -1,0 +1,17 @@
+.about-page { background: #fff; min-height: 100vh; padding-top: 7rem; }
+.about-intro { align-items: center; display: grid; gap: 4rem; grid-template-columns: 1fr; margin: auto; max-width: 80rem; padding: 4rem 1.5rem; }
+.about-copy { color: #64748b; font-size: .875rem; font-weight: 500; line-height: 1.625; margin-bottom: 1.5rem; }
+.about-feature { background: #f8fafc; border: 1px solid #f1f5f9; border-radius: 3.5rem; padding: 3rem; position: relative; }
+.about-feature-icon { color: #0f2a29; margin-bottom: 1.5rem; }
+.about-feature-title { color: #1e293b; font-size: 1.25rem; font-weight: 700; margin-bottom: .5rem; }
+.about-feature-copy, .about-pillar-copy { color: #64748b; font-size: .875rem; font-weight: 500; line-height: 1.625; }
+.about-pillars { background: #f8fafc; border-radius: 5rem 5rem 0 0; padding: 6rem 1.5rem; }
+.about-pillars__inner { margin: auto; max-width: 80rem; }
+.about-pillar-grid { display: grid; gap: 2rem; grid-template-columns: 1fr; margin-top: 1rem; }
+.about-pillar { background: #fff; border: 1px solid #f1f5f9; border-radius: 2.5rem; box-shadow: 0 1px 2px rgb(0 0 0 / .05); padding: 2rem; transition: all 300ms; }
+.about-pillar:hover { box-shadow: 0 20px 25px -5px rgb(0 0 0 / .1); }
+.about-pillar-icon { align-items: center; background: #0f2a29; border-radius: 1rem; box-shadow: 0 4px 6px -1px rgb(15 42 41 / .1); color: #c4a456; display: flex; height: 3.5rem; justify-content: center; margin-bottom: 1.5rem; width: 3.5rem; }
+.about-pillar-title { color: #1e293b; font-size: 1.125rem; font-weight: 700; margin-bottom: .5rem; }
+.about-pillar-copy { color: #94a3b8; }
+@media (min-width: 1024px) { .about-intro { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 768px) { .about-pillar-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }

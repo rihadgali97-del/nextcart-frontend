@@ -1,6 +1,7 @@
 import React from 'react';
 import SectionHeader from '../components/ui/SectionHeader';
 import { Layers, Truck, LineChart, Lock } from 'lucide-react';
+import '../styles/pages/services.css';
 
 const Services = () => {
   const platformServices = [
@@ -11,8 +12,8 @@ const Services = () => {
   ];
 
   return (
-    <div className="bg-[#f8fafc] min-h-screen pt-28">
-      <div className="max-w-7xl mx-auto px-6 py-16">
+    <div className="services-page">
+      <div className="services-page__inner">
         <SectionHeader 
           tag="Platform Ecosystem" 
           title="What GebeyaPlus Provides" 
@@ -20,15 +21,15 @@ const Services = () => {
           alignment="center"
         />
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-6">
+        <div className="services-grid">
           {platformServices.map((service, i) => (
-            <div key={i} className="bg-white p-10 rounded-[3rem] border border-slate-100 shadow-sm flex flex-col sm:flex-row gap-6 items-start hover:shadow-2xl hover:shadow-slate-100 transition-all duration-300">
-              <div className="w-14 h-14 bg-[#0f2a29] text-[#c4a456] rounded-2xl flex items-center justify-center shrink-0 shadow-md">
+            <div key={i} className="services-card">
+              <div className="services-card__icon">
                 {service.icon}
               </div>
               <div>
-                <h3 className="text-xl font-bold text-slate-800 mb-2.5">{service.title}</h3>
-                <p className="text-sm text-slate-400 leading-relaxed font-medium">{service.body || service.description}</p>
+                <h3 className="services-card__title">{service.title}</h3>
+                <p className="services-card__copy">{service.body || service.description}</p>
               </div>
             </div>
           ))}

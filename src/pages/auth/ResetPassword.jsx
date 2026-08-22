@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { Eye, EyeOff, Lock } from 'lucide-react';
 import { resetPassword } from '../../services/api';
 import Logo from '../../components/common/Logo';
+import '../../styles/auth/reset-password.css';
 
 const ResetPassword = () => {
   const { token } = useParams();
@@ -50,57 +51,57 @@ const ResetPassword = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 flex items-center justify-center p-6">
-      <div className="bg-white w-full max-w-md rounded-xl shadow-lg p-8">
-        <div className="mb-4">
+    <div className="auth-page">
+      <div className="auth-card">
+        <div className="auth-logo">
           <Logo className="h-10 mx-auto" showText={false} />
         </div>
 
-        <div className="text-center mb-6">
-          <h1 className="text-2xl font-bold text-slate-900">Create New Password</h1>
-          <p className="text-sm text-slate-500">Choose a password with at least 8 characters.</p>
+        <div className="auth-header">
+          <h1 className="auth-title">Create New Password</h1>
+          <p className="auth-description">Choose a password with at least 8 characters.</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {error && <p className="text-red-500 text-xs font-medium bg-red-50 p-2 rounded">{error}</p>}
-          {message && <p className="text-emerald-700 text-xs font-medium bg-emerald-50 p-2 rounded">{message}</p>}
+        <form onSubmit={handleSubmit} className="auth-form">
+          {error && <p className="auth-alert auth-alert--error">{error}</p>}
+          {message && <p className="auth-alert auth-alert--success">{message}</p>}
 
-          <div className="relative">
-            <Lock className="absolute left-3 top-3 text-slate-400" size={18} />
+          <div className="auth-input-group">
+            <Lock className="auth-input-icon" size={18} />
             <input
               type={showPassword ? 'text' : 'password'}
               placeholder="New password"
               required
               minLength={8}
               value={formData.password}
-              className="w-full pl-10 pr-10 py-3 bg-white border border-slate-200 rounded-md text-sm outline-none focus:ring-2 focus:ring-[#c4a456]/20"
+              className="auth-input auth-input--with-left auth-input--with-right"
               onChange={(e) => setFormData({ ...formData, password: e.target.value })}
             />
-            <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-3 text-slate-400">
+            <button type="button" onClick={() => setShowPassword(!showPassword)} className="auth-password-toggle">
               {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
             </button>
           </div>
 
-          <div className="relative">
-            <Lock className="absolute left-3 top-3 text-slate-400" size={18} />
+          <div className="auth-input-group">
+            <Lock className="auth-input-icon" size={18} />
             <input
               type={showPassword ? 'text' : 'password'}
               placeholder="Confirm new password"
               required
               minLength={8}
               value={formData.confirmPassword}
-              className="w-full pl-10 pr-3 py-3 bg-white border border-slate-200 rounded-md text-sm outline-none focus:ring-2 focus:ring-[#c4a456]/20"
+              className="auth-input auth-input--with-left"
               onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
             />
           </div>
 
-          <button type="submit" disabled={isSubmitting} className="w-full py-3 bg-[#c4a456] text-white font-semibold rounded-md disabled:opacity-70">
+          <button type="submit" disabled={isSubmitting} className="auth-primary-button">
             {isSubmitting ? 'Updating password...' : 'Update Password'}
           </button>
         </form>
 
-        <p className="mt-5 text-center text-sm text-slate-500">
-          Remembered your password? <button type="button" onClick={() => navigate('/login')} className="text-[#c4a456] font-semibold">Sign in</button>
+        <p className="auth-footer auth-footer--spaced">
+          Remembered your password? <button type="button" onClick={() => navigate('/login')} className="auth-link">Sign in</button>
         </p>
       </div>
     </div>
