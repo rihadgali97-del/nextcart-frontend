@@ -2,6 +2,7 @@ import React from "react";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import nextCartLogo from "../../assets/nextcart-logo.png";
+import "../../styles/admin/admin-dashboard.css";
 import API, {
   getAdminStats,
   getAdminUsers,
@@ -55,8 +56,7 @@ const STATUS_STYLES = {
 const Pill = ({ label }) => {
   const s = STATUS_STYLES[label?.toLowerCase()] || { bg: "#f1efe8", color: "#5f5e5a" };
   return (
-    <span style={{ background: s.bg, color: s.color, padding: "3px 10px", borderRadius: 20,
-      fontSize: 11, fontWeight: 600, display: "inline-block", textTransform: "capitalize" }}>
+    <span className="admin-pill" style={{ "--pill-background": s.bg, "--pill-color": s.color }}>
       {label || "—"}
     </span>
   );
@@ -65,9 +65,7 @@ const Pill = ({ label }) => {
 const Avatar = ({ name = "?", size = 32, bg = "#1D9E75", color = "#fff" }) => {
   const initials = name.split(" ").slice(0, 2).map((w) => w[0]).join("").toUpperCase();
   return (
-    <div style={{ width: size, height: size, borderRadius: "50%", background: bg, color,
-      display: "flex", alignItems: "center", justifyContent: "center",
-      fontSize: size * 0.35, fontWeight: 600, flexShrink: 0 }}>
+    <div className="admin-avatar" style={{ "--avatar-size": `${size}px`, "--avatar-background": bg, "--avatar-color": color }}>
       {initials}
     </div>
   );
@@ -163,26 +161,22 @@ const exportPDF = (rows, cols, title) => {
 
 // ─── Stat Card ────────────────────────────────────────────────────────────────
 const StatCard = ({ label, value, sub, accent }) => (
-  <div style={{ background: "#fff", border: "1px solid #e8ede9", borderRadius: 12,
-    padding: "18px 20px", position: "relative", overflow: "hidden" }}>
-    <div style={{ position: "absolute", bottom: -14, right: -14, width: 64, height: 64,
-      borderRadius: "50%", background: accent, opacity: 0.08 }} />
-    <div style={{ fontSize: 11, color: "#7a8c7e", fontWeight: 500, marginBottom: 6, letterSpacing: ".3px" }}>{label}</div>
-    <div style={{ fontSize: 28, fontWeight: 700, color: "#1a2b1f", letterSpacing: "-.5px", lineHeight: 1 }}>{value}</div>
-    {sub && <div style={{ fontSize: 11, color: "#7a8c7e", marginTop: 6 }}>{sub}</div>}
-    <div style={{ width: 32, height: 3, borderRadius: 2, background: accent, marginTop: 12 }} />
+  <div className="admin-stat-card" style={{ "--stat-accent": accent }}>
+    <div className="admin-stat-card__orb" />
+    <div className="admin-stat-card__label">{label}</div>
+    <div className="admin-stat-card__value">{value}</div>
+    {sub && <div className="admin-stat-card__sub">{sub}</div>}
+    <div className="admin-stat-card__bar" />
   </div>
 );
 
 // ─── Panel wrapper ────────────────────────────────────────────────────────────
 const Panel = ({ title, action, onAction, children, style = {} }) => (
-  <div style={{ background: "#fff", border: "1px solid #e8ede9", borderRadius: 12,
-    padding: "18px 20px", ...style }}>
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-      <div style={{ fontSize: 14, fontWeight: 600, color: "#1a2b1f" }}>{title}</div>
+  <div className="admin-panel" style={style}>
+    <div className="admin-panel__header">
+      <div className="admin-panel__title">{title}</div>
       {action && (
-        <button onClick={onAction} style={{ fontSize: 12, color: "#1D9E75", background: "none",
-          border: "none", cursor: "pointer", fontWeight: 500, padding: 0 }}>{action}</button>
+        <button onClick={onAction} className="admin-panel__action">{action}</button>
       )}
     </div>
     {children}
@@ -191,28 +185,25 @@ const Panel = ({ title, action, onAction, children, style = {} }) => (
 
 // ─── Table ────────────────────────────────────────────────────────────────────
 const Table = ({ cols, rows, loading }) => (
-  <div style={{ overflowX: "auto" }}>
-    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+  <div className="admin-table-wrap">
+    <table className="admin-table">
       <thead>
         <tr>
           {cols.map((c) => (
-            <th key={c.key} style={{ textAlign: "left", color: "#7a8c7e", fontWeight: 500,
-              fontSize: 11, letterSpacing: ".3px", padding: "0 12px 10px 0",
-              borderBottom: "1px solid #e8ede9", whiteSpace: "nowrap" }}>{c.label}</th>
+            <th key={c.key} className="admin-table__heading">{c.label}</th>
           ))}
         </tr>
       </thead>
       <tbody>
         {loading ? (
-          <tr><td colSpan={cols.length} style={{ padding: "24px 0", textAlign: "center", color: "#7a8c7e" }}>
-            <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
-              <span style={{ display: "inline-block", width: 14, height: 14, border: "2px solid #e8ede9",
-                borderTopColor: "#1D9E75", borderRadius: "50%", animation: "spin 0.7s linear infinite" }} />
+          <tr><td colSpan={cols.length} className="admin-table__loading">
+            <span>
+              <span className="admin-spinner" />
               Loading…
             </span>
           </td></tr>
         ) : rows.length === 0 ? (
-          <tr><td colSpan={cols.length} style={{ padding: "32px 0", textAlign: "center", color: "#7a8c7e" }}>
+          <tr><td colSpan={cols.length} className="admin-table__empty">
             No results found
           </td></tr>
         ) : (
@@ -221,9 +212,7 @@ const Table = ({ cols, rows, loading }) => (
               onMouseEnter={e => e.currentTarget.style.background = "#fafbfa"}
               onMouseLeave={e => e.currentTarget.style.background = ""}>
               {cols.map((c) => (
-                <td key={c.key} style={{ padding: "10px 12px 10px 0",
-                  borderBottom: i < rows.length - 1 ? "1px solid #e8ede9" : "none",
-                  verticalAlign: "middle" }}>
+                <td key={c.key} className="admin-table__cell" style={{ "--table-divider": i < rows.length - 1 ? "1px solid #e8ede9" : "none" }}>
                   {c.render ? c.render(row) : row[c.key] ?? "—"}
                 </td>
               ))}
@@ -1098,92 +1087,52 @@ const loadProducts = useCallback(async () => {
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <>
-      <style>{`
-        @keyframes spin    { to { transform: rotate(360deg); } }
-        @keyframes fadeIn  { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
-        .nav-tooltip       { display:none; }
-        .nav-item:hover .nav-tooltip { display:block; }
-      `}</style>
-      <div style={{ display:"flex", minHeight:"100vh", fontFamily:"'DM Sans',system-ui,sans-serif", background:"#F3F5F1" }}>
+    <div className="admin-dashboard">
 
         {/* ── SIDEBAR ─────────────────────────────────────────────────── */}
-        <aside style={{ width:collapsed?80:240, background:"#0f2a29",
-          display:"flex", flexDirection:"column", flexShrink:0,
-          transition:"width .3s cubic-bezier(.4,0,.2,1)", overflow:"hidden",
-          position:"sticky", top:0, height:"100vh" }}>
+        <aside className={`admin-dashboard__sidebar ${collapsed ? "admin-dashboard__sidebar--collapsed" : ""}`}>
 
           {/* Logo + toggle */}
-          <div style={{ padding:"18px 14px 14px", borderBottom:"1px solid rgba(255,255,255,.07)",
-            display:"flex", alignItems:"center",
-            justifyContent:collapsed?"center":"space-between", gap:10, minHeight:72 }}>
-            <div style={{ display:"flex", alignItems:"center", gap:12, overflow:"hidden" }}>
+          <div className={`admin-dashboard__brand ${collapsed ? "admin-dashboard__brand--collapsed" : ""}`}>
+            <div className="admin-dashboard__brand-content">
               {/* Real NextCart logo */}
-              <div style={{ width:40, height:40, borderRadius:"50%", overflow:"hidden",
-                background:"#fff", flexShrink:0, display:"flex", alignItems:"flex-start",
-                justifyContent:"center", boxShadow:"0 2px 8px rgba(0,0,0,.2)" }}>
+              <div className="admin-dashboard__logo-mark">
                 <img src={nextCartLogo} alt="NextCart"
-                  style={{ width:56, maxWidth:"none", transform:"scale(1.5) translateY(-1px)",
-                    objectFit:"contain" }}/>
+                  className="admin-dashboard__logo"/>
               </div>
               {!collapsed && (
-                <h1 style={{ fontSize:22, fontWeight:900, color:"#fff", margin:0,
-                  whiteSpace:"nowrap", letterSpacing:"-.3px", animation:"fadeIn .3s ease" }}>
-                  Next<span style={{ color:"#c4a456" }}>Cart</span>
+                <h1 className="admin-dashboard__brand-name">
+                  Next<span className="admin-dashboard__brand-accent">Cart</span>
                 </h1>
               )}
             </div>
-            <button onClick={()=>setCollapsed(p=>!p)}
-              style={{ width:28, height:28, borderRadius:8, background:"rgba(255,255,255,.06)",
-                border:"none", color:"rgba(255,255,255,.6)", cursor:"pointer", flexShrink:0,
-                display:"flex", alignItems:"center", justifyContent:"center", fontSize:14,
-                transition:"background .15s" }}
-              onMouseEnter={e=>{ e.currentTarget.style.background="#c4a456"; e.currentTarget.style.color="#fff"; }}
-              onMouseLeave={e=>{ e.currentTarget.style.background="rgba(255,255,255,.06)"; e.currentTarget.style.color="rgba(255,255,255,.6)"; }}>
+            <button onClick={()=>setCollapsed(p=>!p)} className="admin-dashboard__collapse-button">
               {collapsed ? "›" : "‹"}
             </button>
           </div>
 
           {/* Nav label */}
           {!collapsed && (
-            <div style={{ padding:"16px 18px 6px", fontSize:10, fontWeight:700, letterSpacing:"2px",
-              color:"#c4a456", opacity:.8, textTransform:"uppercase" }}>Admin Panel</div>
+            <div className="admin-dashboard__nav-label">Admin Panel</div>
           )}
 
           {/* Nav items */}
-          <nav style={{ padding:"8px 8px", flex:1, overflowY:"auto" }}>
+          <nav className="admin-dashboard__nav">
             {NAV.map(item => {
               const active = section === item.id;
               return (
-                <div key={item.id} className="nav-item"
+                <button key={item.id} className={`admin-dashboard__nav-item ${active ? "admin-dashboard__nav-item--active" : ""} ${collapsed ? "admin-dashboard__nav-item--collapsed" : ""}`}
                   onClick={()=>setSection(item.id)}
-                  style={{ position:"relative", display:"flex", alignItems:"center",
-                    gap:collapsed?0:14, padding:collapsed?"11px 0":"10px 14px",
-                    justifyContent:collapsed?"center":"flex-start",
-                    borderRadius:14, cursor:"pointer", marginBottom:2, fontSize:13,
-                    fontWeight:active?700:400,
-                    color:active?"#fff":"rgba(255,255,255,.55)",
-                    background:active?"#c4a456":"transparent",
-                    boxShadow:active?"0 4px 12px rgba(196,164,86,.25)":"none",
-                    transition:"all .2s" }}
-                  onMouseEnter={e=>{ if(!active){ e.currentTarget.style.background="rgba(255,255,255,.06)"; e.currentTarget.style.color="#fff"; }}}
-                  onMouseLeave={e=>{ if(!active){ e.currentTarget.style.background="transparent"; e.currentTarget.style.color="rgba(255,255,255,.55)"; }}}>
-                  <span style={{ fontSize:17, flexShrink:0,
-                    color:active?"#fff":"rgba(255,255,255,.35)",
-                    transition:"color .2s" }}>{item.icon}</span>
-                  {!collapsed && <span style={{ whiteSpace:"nowrap" }}>{item.label}</span>}
+                  >
+                  <span className="admin-dashboard__nav-icon">{item.icon}</span>
+                  {!collapsed && <span className="admin-dashboard__nav-text">{item.label}</span>}
                   {/* Tooltip in collapsed mode */}
                   {collapsed && (
-                    <div className="nav-tooltip"
-                      style={{ position:"absolute", left:58, background:"#c4a456", color:"#fff",
-                        padding:"5px 12px", borderRadius:10, fontSize:11, fontWeight:700,
-                        whiteSpace:"nowrap", pointerEvents:"none", zIndex:50,
-                        boxShadow:"0 4px 14px rgba(0,0,0,.2)", textTransform:"uppercase",
-                        letterSpacing:".1em" }}>
+                    <div className="admin-dashboard__tooltip">
                       {item.label}
                     </div>
                   )}
-                </div>
+                </button>
               );
             })}
           </nav>
@@ -1296,7 +1245,7 @@ const loadProducts = useCallback(async () => {
           </div>
 
           {/* Content */}
-          <div style={{ flex:1, padding:"20px 24px", overflowY:"auto" }}>
+          <div className="admin-dashboard__content">
             {(sectionMap[section] || sectionMap.dashboard)()}
           </div>
         </div>
@@ -1311,8 +1260,7 @@ const loadProducts = useCallback(async () => {
             {toast.type==="error"?"✕ ":"✓ "}{toast.msg}
           </div>
         )}
-      </div>
-    </>
+    </div>
   );
 }
 

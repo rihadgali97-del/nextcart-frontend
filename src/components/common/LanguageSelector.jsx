@@ -1,6 +1,7 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Globe } from 'lucide-react';
+import '../../styles/common/language-selector.css';
 
 const LanguageSelector = () => {
   const { i18n } = useTranslation();
@@ -10,13 +11,12 @@ const LanguageSelector = () => {
   };
 
   return (
-    <div className="flex items-center gap-1.5 bg-white/5 border border-white/10 px-2.5 py-1.5 rounded-lg hover:bg-white/10 transition-all">
-      <Globe size={13} className="text-[#c4a456]" />
+    <div className="language-selector">
+      <Globe size={13} className="language-selector__icon" />
       <select 
         onChange={changeLanguage} 
         value={i18n.language}
-        className="bg-transparent text-[11px] font-bold uppercase tracking-wider text-white/90 outline-none cursor-pointer pr-1"
-        style={{ colorScheme: 'dark' }} // Ensures dropdown options match dark theme natively
+        className="language-selector__select"
       >
         <option value="en" className="bg-[#0f2a29] text-white">EN</option>
         <option value="am" className="bg-[#0f2a29] text-white">አማ</option>

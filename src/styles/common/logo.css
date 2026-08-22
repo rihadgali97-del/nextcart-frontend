@@ -1,0 +1,5 @@
+.brand-logo { align-items:center; display:flex; gap:.75rem; user-select:none; }
+.brand-logo__mark { align-items:flex-start; background:rgb(255 255 255 / .05); border-radius:9999px; display:flex; height:2.5rem; justify-content:center; overflow:hidden; padding:.125rem; width:2.5rem; }
+.brand-logo__image { max-width:none; object-fit:contain; transform:translateY(-.375rem) scale(1.5); transition:transform 300ms; width:3.5rem; }
+.brand-logo:hover .brand-logo__image { transform:translateY(-.375rem) scale(1.6); }
+.brand-logo__text { color:#0f172a; font-family:ui-sans-serif,system-ui,sans-serif; font-size:1.25rem; font-weight:900; letter-spacing:-.025em; transition:color 150ms; }.brand-logo__text--light { color:#fff; }.brand-logo__accent { color:#c4a456; }
