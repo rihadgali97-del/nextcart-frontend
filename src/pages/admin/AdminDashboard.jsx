@@ -39,6 +39,12 @@ const ago = (d) => {
   return `${Math.floor(s / 86400)}d ago`;
 };
 
+const displayIp = (ip) => {
+  if (!ip) return "Unavailable";
+  if (ip === "::1") return "127.0.0.1";
+  return ip.replace(/^::ffff:/, "");
+};
+
 const STATUS_STYLES = {
   pending:    { bg: "#faeeda", color: "#854F0B" },
   processing: { bg: "#e6f1fb", color: "#185FA5" },
@@ -721,7 +727,7 @@ const loadProducts = useCallback(async () => {
     { key: "target",    label: "Target",  csvValue: (r) => r.target || "" },
     { key: "details",   label: "Details", csvValue: (r) => r.details || "" },
     { key: "admin",     label: "Admin",   csvValue: (r) => r.adminId?.name || r.adminId?.email || "System" },
-    { key: "ipAddress", label: "IP",      csvValue: (r) => r.ipAddress || "" },
+    { key: "ipAddress", label: "IP",      csvValue: (r) => displayIp(r.ipAddress) },
     { key: "timestamp", label: "Time",    csvValue: (r) => new Date(r.timestamp || r.createdAt).toLocaleString() },
   ];
 
@@ -926,7 +932,7 @@ const loadProducts = useCallback(async () => {
           { key: "target",    label: "Target",  render: (r) => r.target || "—" },
           { key: "details",   label: "Details", render: (r) => <span style={{ color: "#7a8c7e", fontSize: 12 }}>{r.details}</span> },
           { key: "adminId",   label: "Admin",   render: (r) => r.adminId?.name || r.adminId?.email || "System" },
-          { key: "ipAddress", label: "IP",      render: (r) => <span style={{ fontFamily: "monospace", fontSize: 11 }}>{r.ipAddress}</span> },
+          { key: "ipAddress", label: "IP",      render: (r) => <span style={{ fontFamily: "monospace", fontSize: 11 }}>{displayIp(r.ipAddress)}</span> },
           { key: "timestamp", label: "Time",    render: (r) => ago(r.timestamp || r.createdAt) },
         ]}
         rows={filteredAudit}
@@ -947,27 +953,38 @@ const loadProducts = useCallback(async () => {
           <p style={{ color: "#7a8c7e", fontSize: 13 }}>Loading settings…</p>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-            {Object.entries(settingsForm).map(([key, val]) =>
-              typeof val === "boolean" ? (
-                <SettingRow key={key} label={key}>
+            {(() => {
+              const config = settingsForm.globalConfigurations || {};
+              const updateConfig = (key, value) => setSettingsForm((previous) => ({
+                ...previous,
+                globalConfigurations: { ...(previous.globalConfigurations || {}), [key]: value },
+              }));
+              const numberField = (label, key, fallback = 0) => (
+                <SettingRow key={key} label={label}>
+                  <input type="number" value={config[key] ?? fallback} style={inputStyle}
+                    onChange={(e) => updateConfig(key, Number(e.target.value))} />
+                </SettingRow>
+              );
+              const toggleField = (label, key, fallback = false) => (
+                <SettingRow key={key} label={label}>
                   <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
-                    <input type="checkbox" checked={val}
-                      onChange={(e) => setSettingsForm((p) => ({ ...p, [key]: e.target.checked }))} />
-                    <span style={{ fontSize: 13 }}>{val ? "Enabled" : "Disabled"}</span>
+                    <input type="checkbox" checked={config[key] ?? fallback}
+                      onChange={(e) => updateConfig(key, e.target.checked)} />
+                    <span style={{ fontSize: 13 }}>{config[key] ? "Enabled" : "Disabled"}</span>
                   </label>
                 </SettingRow>
-              ) : typeof val === "number" ? (
-                <SettingRow key={key} label={key}>
-                  <input type="number" value={val} style={inputStyle}
-                    onChange={(e) => setSettingsForm((p) => ({ ...p, [key]: Number(e.target.value) }))} />
-                </SettingRow>
-              ) : typeof val === "string" ? (
-                <SettingRow key={key} label={key}>
-                  <input type="text" value={val} style={inputStyle}
-                    onChange={(e) => setSettingsForm((p) => ({ ...p, [key]: e.target.value }))} />
-                </SettingRow>
-              ) : null
-            )}
+              );
+              return <>
+                <SettingRow label="Commission Rate"><input type="number" min="0" max="100" value={settingsForm.commissionRate ?? 5} style={inputStyle} onChange={(e) => setSettingsForm((p) => ({ ...p, commissionRate: Number(e.target.value) }))} /></SettingRow>
+                <SettingRow label="Default Currency"><select value={settingsForm.defaultCurrency || "ETB"} style={inputStyle} onChange={(e) => setSettingsForm((p) => ({ ...p, defaultCurrency: e.target.value }))}><option value="ETB">ETB</option><option value="USD">USD</option><option value="EUR">EUR</option><option value="GBP">GBP</option><option value="INR">INR</option></select></SettingRow>
+                {numberField("Tax Rate", "taxRate")}
+                {numberField("Free Shipping Threshold", "freeShippingThreshold")}
+                {numberField("Minimum Order Value", "minOrderValue", 1)}
+                {numberField("Maximum Order Value", "maxOrderValue", 10000)}
+                {toggleField("Maintenance Mode", "maintenanceMode")}
+                {toggleField("Allow New Vendors", "allowNewVendors", true)}
+              </>;
+            })()}
             <div style={{ paddingTop: 8 }}>
               <button onClick={handleSaveSettings} style={primaryBtn}>Save Settings</button>
             </div>
@@ -1266,16 +1283,6 @@ const loadProducts = useCallback(async () => {
 }
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
-/* function ActionBtn({ label, color, onClick }) {
-  return (
-    <button onClick={onClick}
-      style={{ fontSize: 11, fontWeight: 600, padding: "4px 10px", borderRadius: 6,
-        border: `1px solid ${color}30`, background: `${color}10`, color, cursor: "pointer", whiteSpace: "nowrap" }}>
-      {label}
-    </button>
-  );
-} */
-
 function LegacyPagination({ page, onChange }) {
   return (
     <div style={{ display: "flex", gap: 8, marginTop: 16, justifyContent: "flex-end", alignItems: "center" }}>

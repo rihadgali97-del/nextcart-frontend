@@ -5,6 +5,12 @@ import {
 } from 'lucide-react';
 import { getUserProfile, getAdminSettings, updateAdminSettings, getAuditLogs, updateProfile } from '../../services/api';
 
+const displayIp = (ip) => {
+  if (!ip) return 'Unavailable';
+  if (ip === '::1') return '127.0.0.1';
+  return ip.replace(/^::ffff:/, '');
+};
+
 const SystemSettings = () => {
   const [activeTab, setActiveTab] = useState('profile');
   const [loading, setLoading] = useState(false);
@@ -19,11 +25,20 @@ const SystemSettings = () => {
   const [adminConfig, setAdminConfig] = useState({ 
     commissionRate: 0, 
     defaultCurrency: 'USD',
-    maintenanceMode: false,
-    taxRate: 0,
-    minOrderValue: 0,
-    freeShippingThreshold: 0
+    globalConfigurations: {
+      maintenanceMode: false,
+      taxRate: 0,
+      minOrderValue: 1,
+      maxOrderValue: 10000,
+      freeShippingThreshold: 0,
+      allowNewVendors: true
+    }
   });
+  const globalConfig = adminConfig.globalConfigurations || {};
+  const updateGlobalConfig = (key, value) => setAdminConfig(prev => ({
+    ...prev,
+    globalConfigurations: { ...(prev.globalConfigurations || {}), [key]: value }
+  }));
 
   useEffect(() => {
     loadData();
@@ -197,8 +212,8 @@ const SystemSettings = () => {
                     <label className="text-[10px] font-black uppercase text-[#c4a456] tracking-tighter">Global Tax Rate</label>
                     <div className="flex items-center gap-4">
                       <Percent className="text-slate-300" />
-                      <input type="number" value={adminConfig.taxRate}
-                        onChange={(e) => setAdminConfig({...adminConfig, taxRate: e.target.value})}
+                      <input type="number" value={globalConfig.taxRate ?? 0}
+                        onChange={(e) => updateGlobalConfig('taxRate', Number(e.target.value))}
                         className="w-full bg-transparent text-3xl font-black outline-none"
                       />
                     </div>
@@ -216,8 +231,8 @@ const SystemSettings = () => {
                    <Truck className="text-[#c4a456]" size={40} />
                    <div className="flex-1">
                       <label className="text-[10px] font-black text-slate-400 uppercase">Free Shipping Threshold</label>
-                      <input type="number" value={adminConfig.freeShippingThreshold}
-                        onChange={(e) => setAdminConfig({...adminConfig, freeShippingThreshold: e.target.value})}
+                      <input type="number" value={globalConfig.freeShippingThreshold ?? 0}
+                        onChange={(e) => updateGlobalConfig('freeShippingThreshold', Number(e.target.value))}
                         className="w-full bg-transparent text-2xl font-black outline-none"
                       />
                    </div>
@@ -232,12 +247,15 @@ const SystemSettings = () => {
                <div className="overflow-x-auto">
                  <table className="w-full text-left text-sm">
                    <thead className="bg-slate-50 text-slate-400 uppercase text-[10px] font-black">
-                     <tr><th className="px-6 py-4">Action</th><th className="px-6 py-4">Timestamp</th></tr>
+                     <tr><th className="px-6 py-4">Action</th><th className="px-6 py-4">Admin</th><th className="px-6 py-4">IP Address</th><th className="px-6 py-4">Details</th><th className="px-6 py-4">Timestamp</th></tr>
                    </thead>
                    <tbody className="divide-y divide-slate-50">
                      {logs.map((log) => (
                        <tr key={log._id}>
                          <td className="px-6 py-4 font-bold">{log.action}</td>
+                         <td className="px-6 py-4">{log.adminId?.name || log.adminEmail || 'System'}</td>
+                         <td className="px-6 py-4 font-mono text-xs">{displayIp(log.ipAddress)}</td>
+                         <td className="px-6 py-4 text-slate-500">{log.details || '—'}</td>
                          <td className="px-6 py-4 text-slate-400">{new Date(log.timestamp).toLocaleString()}</td>
                        </tr>
                      ))}
@@ -249,12 +267,12 @@ const SystemSettings = () => {
         </div>
 
         <div className="col-span-12 lg:col-span-4 space-y-6">
-          <div className={`p-8 rounded-[2.5rem] border-2 ${adminConfig.maintenanceMode ? 'bg-red-50 border-red-200' : 'bg-white border-slate-100'}`}>
+          <div className={`p-8 rounded-[2.5rem] border-2 ${globalConfig.maintenanceMode ? 'bg-red-50 border-red-200' : 'bg-white border-slate-100'}`}>
             <div className="flex items-center justify-between mb-4">
-              <AlertTriangle className={adminConfig.maintenanceMode ? 'text-red-500' : 'text-slate-300'} />
-              <button onClick={() => setAdminConfig({...adminConfig, maintenanceMode: !adminConfig.maintenanceMode})}
-                className={`w-14 h-7 rounded-full relative transition-all ${adminConfig.maintenanceMode ? 'bg-red-500' : 'bg-slate-200'}`}>
-                <div className={`absolute top-1 w-5 h-5 bg-white rounded-full transition-all ${adminConfig.maintenanceMode ? 'left-8' : 'left-1'}`} />
+              <AlertTriangle className={globalConfig.maintenanceMode ? 'text-red-500' : 'text-slate-300'} />
+              <button onClick={() => updateGlobalConfig('maintenanceMode', !globalConfig.maintenanceMode)}
+                className={`w-14 h-7 rounded-full relative transition-all ${globalConfig.maintenanceMode ? 'bg-red-500' : 'bg-slate-200'}`}>
+                <div className={`absolute top-1 w-5 h-5 bg-white rounded-full transition-all ${globalConfig.maintenanceMode ? 'left-8' : 'left-1'}`} />
               </button>
             </div>
             <h3 className="font-black">Maintenance Mode</h3>
