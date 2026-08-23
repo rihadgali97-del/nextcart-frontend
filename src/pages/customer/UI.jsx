@@ -1,3 +1,4 @@
+import React from "react";
 import { C, STATUS, avatarColor, ITEMS_PER_PAGE } from "./constants";
 import "../../styles/customer/dashboard.css";
 

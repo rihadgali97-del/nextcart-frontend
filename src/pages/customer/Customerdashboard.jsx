@@ -3,6 +3,14 @@ import { useNavigate } from "react-router-dom";
 import { io } from "socket.io-client";
 import nextCartLogo from "../../assets/nextcart-logo.png";
 import DeliveryMap from "./DeliveryMap";
+import CustomerMessages from "./CustomerMessages";
+import CustomerHome from "./CustomerHome";
+import OrderTracker from "./OrderTracker";
+import ProductModal from "./ProductModal";
+import useNearbySearch from "./useNearbySearch";
+import { Pill, Avatar, Stars, Card, Panel, StatCard, Input, Btn, Spinner, Empty, Pagination, Donut, MiniBar } from "./UI";
+import { C, STATUS, avatarColor, NAV, ITEMS_PER_PAGE, PRODUCTS_PER_PAGE, NEARBY_LIMIT, notifStyle } from "./constants";
+import { notifAPI, fmt, ago, fmtDate, toast, registerToastSetter } from "./helpers";
 import API, {
   getUserProfile,
   updateProfile,
@@ -13,298 +21,6 @@ import API, {
   deleteReview,
 } from "../../services/api";
 
-// ─── Notification API helpers ─────────────────────────────────────────────────
-const notifAPI = {
-  getAll:      (params={}) => API.get("/notifications", { params }),
-  markRead:    (id)        => API.put(`/notifications/${id}/read`),
-  markAllRead: ()          => API.put("/notifications/read-all"),
-  remove:      (id)        => API.delete(`/notifications/${id}`),
-};
-
-// ─── Design tokens ─────────────────────────────────────────────────────────────
-const C = {
-  sidebar:      "#0E2A23",
-  sidebarHover: "#1a3d2f",
-  gold:         "#C6A84B",
-  green:        "#1D9E75",
-  red:          "#D85A30",
-  blue:         "#185FA5",
-  purple:       "#533AB7",
-  bg:           "#F3F5F1",
-  card:         "#fff",
-  border:       "#e8ede9",
-  text:         "#1a2b1f",
-  muted:        "#7a8c7e",
-};
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-const fmt = (n) =>
-  n >= 1_000_000 ? `$${(n / 1_000_000).toFixed(1)}M`
-  : n >= 1_000   ? `$${(n / 1_000).toFixed(1)}k`
-  : `$${Number(n || 0).toFixed(2)}`;
-
-const ago = (d) => {
-  const s = Math.floor((Date.now() - new Date(d)) / 1000);
-  if (s < 60)    return `${s}s ago`;
-  if (s < 3600)  return `${Math.floor(s / 60)}m ago`;
-  if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
-  return new Date(d).toLocaleDateString();
-};
-
-const fmtDate = (d) => d ? new Date(d).toLocaleDateString("en-US",
-  { year:"numeric", month:"short", day:"numeric" }) : "—";
-
-const STATUS = {
-  pending:    { bg:"#faeeda", color:"#854F0B", icon:"⏳" },
-  processing: { bg:"#e6f1fb", color:"#185FA5", icon:"⚙️" },
-  shipped:    { bg:"#edf6ff", color:"#0c5a9e", icon:"🚚" },
-  delivered:  { bg:"#eaf3de", color:"#3B6D11", icon:"✅" },
-  cancelled:  { bg:"#fcebeb", color:"#A32D2D", icon:"✕"  },
-};
-
-const Pill = ({ label }) => {
-  const s = STATUS[label?.toLowerCase()] || { bg:"#f1f1f1", color:"#555", icon:"•" };
-  return (
-    <span style={{ background:s.bg, color:s.color, padding:"3px 10px",
-      borderRadius:20, fontSize:11, fontWeight:600, display:"inline-flex",
-      alignItems:"center", gap:4, textTransform:"capitalize" }}>
-      {s.icon} {label || "—"}
-    </span>
-  );
-};
-
-const AVATAR_COLORS = [C.green, C.blue, C.gold, C.red, C.purple, "#0F6E56"];
-const avatarColor   = (s="") => AVATAR_COLORS[s.charCodeAt(0) % AVATAR_COLORS.length];
-
-const Avatar = ({ name="?", size=36, bg, color="#fff" }) => {
-  const initials = name.split(" ").slice(0,2).map(w=>w[0]).join("").toUpperCase();
-  return (
-    <div style={{ width:size, height:size, borderRadius:"50%",
-      background: bg || avatarColor(name), color, display:"flex",
-      alignItems:"center", justifyContent:"center",
-      fontSize:size*0.36, fontWeight:700, flexShrink:0 }}>
-      {initials}
-    </div>
-  );
-};
-
-const Stars = ({ rating=0, size=14, interactive=false, onChange }) => (
-  <span style={{ display:"inline-flex", gap:2 }}>
-    {[1,2,3,4,5].map(i => (
-      <span key={i} onClick={() => interactive && onChange?.(i)}
-        style={{ fontSize:size, color: i<=rating ? C.gold : "#d0d5d1",
-          cursor: interactive?"pointer":"default", transition:"color .15s" }}>★</span>
-    ))}
-  </span>
-);
-
-const Card = ({ children, style={}, onClick }) => (
-  <div onClick={onClick}
-    style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:12,
-      padding:"18px 20px", ...style, cursor: onClick?"pointer":"default",
-      transition:"box-shadow .15s" }}
-    onMouseEnter={e=>{ if(onClick) e.currentTarget.style.boxShadow="0 4px 18px rgba(0,0,0,.08)"; }}
-    onMouseLeave={e=>{ e.currentTarget.style.boxShadow="none"; }}>
-    {children}
-  </div>
-);
-
-const Panel = ({ title, subtitle, action, onAction, children, style={} }) => (
-  <Card style={style}>
-    <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", marginBottom:16 }}>
-      <div>
-        <div style={{ fontSize:14, fontWeight:600, color:C.text }}>{title}</div>
-        {subtitle && <div style={{ fontSize:11, color:C.muted, marginTop:2 }}>{subtitle}</div>}
-      </div>
-      {action && (
-        <button onClick={onAction} style={{ fontSize:12, color:C.green, background:"none",
-          border:"none", cursor:"pointer", fontWeight:500, padding:0, whiteSpace:"nowrap" }}>
-          {action}
-        </button>
-      )}
-    </div>
-    {children}
-  </Card>
-);
-
-const StatCard = ({ label, value, sub, accent, icon }) => (
-  <Card style={{ position:"relative", overflow:"hidden" }}>
-    <div style={{ position:"absolute", top:14, right:14, fontSize:22, opacity:.15 }}>{icon}</div>
-    <div style={{ fontSize:11, color:C.muted, fontWeight:500, marginBottom:6, letterSpacing:".3px" }}>{label}</div>
-    <div style={{ fontSize:26, fontWeight:700, color:C.text, letterSpacing:"-.5px", lineHeight:1 }}>{value}</div>
-    {sub && <div style={{ fontSize:11, color:C.muted, marginTop:5 }}>{sub}</div>}
-    <div style={{ width:32, height:3, borderRadius:2, background:accent, marginTop:12 }} />
-  </Card>
-);
-
-const Input = ({ label, type="text", value, onChange, placeholder, disabled=false, error }) => (
-  <div style={{ display:"flex", flexDirection:"column", gap:5 }}>
-    {label && <label style={{ fontSize:12, fontWeight:500, color:C.text }}>{label}</label>}
-    <input type={type} value={value} onChange={e=>onChange(e.target.value)}
-      placeholder={placeholder} disabled={disabled}
-      style={{ padding:"9px 12px", border:`1px solid ${error?C.red:C.border}`,
-        borderRadius:8, fontSize:13, color:C.text, outline:"none",
-        background: disabled?"#f9fafb":C.card, transition:"border-color .15s" }}
-      onFocus={e=>{ if(!disabled) e.target.style.borderColor=C.green; }}
-      onBlur={e=>{ e.target.style.borderColor=error?C.red:C.border; }} />
-    {error && <span style={{ fontSize:11, color:C.red }}>{error}</span>}
-  </div>
-);
-
-const Btn = ({ children, onClick, variant="primary", disabled=false, style={}, type="button" }) => {
-  const variants = {
-    primary:   { background:C.sidebar, color:C.gold,  border:"none" },
-    secondary: { background:"#fff",    color:C.text,  border:`1px solid ${C.border}` },
-    danger:    { background:C.red,     color:"#fff",  border:"none" },
-    ghost:     { background:"transparent", color:C.green, border:`1px solid ${C.green}40` },
-  };
-  const v = variants[variant] || variants.primary;
-  return (
-    <button type={type} onClick={onClick} disabled={disabled}
-      style={{ ...v, padding:"9px 20px", borderRadius:8, fontSize:13, fontWeight:600,
-        cursor:disabled?"not-allowed":"pointer", opacity:disabled?.6:1,
-        transition:"opacity .15s, transform .1s", ...style }}
-      onMouseEnter={e=>{ if(!disabled) e.currentTarget.style.opacity=".85"; }}
-      onMouseLeave={e=>{ e.currentTarget.style.opacity="1"; }}>
-      {children}
-    </button>
-  );
-};
-
-const Spinner = ({ size=18 }) => (
-  <span style={{ display:"inline-block", width:size, height:size,
-    border:`2px solid ${C.border}`, borderTopColor:C.green, borderRadius:"50%",
-    animation:"spin .7s linear infinite" }} />
-);
-
-const Empty = ({ icon="📭", text="Nothing here yet" }) => (
-  <div style={{ padding:"40px 0", textAlign:"center" }}>
-    <div style={{ fontSize:40, marginBottom:10 }}>{icon}</div>
-    <div style={{ fontSize:13, color:C.muted }}>{text}</div>
-  </div>
-);
-
-const ITEMS_PER_PAGE    = 5;
-const PRODUCTS_PER_PAGE = 12;
-const NEARBY_LIMIT      = 12;
-
-const Pagination = ({ page, totalItems, perPage=ITEMS_PER_PAGE, onChange }) => {
-  const totalPages = Math.ceil(totalItems / perPage);
-  if (totalPages <= 1) return null;
-  const start = (page-1)*perPage+1;
-  const end   = Math.min(page*perPage, totalItems);
-  return (
-    <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between",
-      marginTop:18, paddingTop:14, borderTop:`1px solid ${C.border}` }}>
-      <span style={{ fontSize:12, color:C.muted }}>
-        Showing <b style={{ color:C.text }}>{start}–{end}</b> of <b style={{ color:C.text }}>{totalItems}</b>
-      </span>
-      <div style={{ display:"flex", alignItems:"center", gap:6 }}>
-        <button disabled={page<=1} onClick={()=>onChange(page-1)}
-          style={{ padding:"6px 14px", fontSize:12, fontWeight:600, borderRadius:7,
-            border:`1px solid ${C.border}`, background:page<=1?"#f3f5f1":"#fff",
-            color:page<=1?C.muted:C.text, cursor:page<=1?"not-allowed":"pointer",
-            transition:"all .15s" }}>← Prev</button>
-        {Array.from({length:totalPages},(_,i)=>i+1)
-          .filter(n=>n===1||n===totalPages||Math.abs(n-page)<=1)
-          .reduce((acc,n,i,arr)=>{
-            if(i>0&&n-arr[i-1]>1) acc.push("...");
-            acc.push(n); return acc;
-          },[])
-          .map((n,i)=>n==="..."?(
-            <span key={`dot${i}`} style={{ fontSize:12,color:C.muted,padding:"0 2px" }}>…</span>
-          ):(
-            <button key={n} onClick={()=>onChange(n)}
-              style={{ width:32,height:32,borderRadius:7,fontSize:12,fontWeight:600,
-                border:`1px solid ${n===page?C.sidebar:C.border}`,
-                background:n===page?C.sidebar:"#fff",
-                color:n===page?C.gold:C.text,cursor:"pointer",transition:"all .15s" }}>
-              {n}
-            </button>
-          ))
-        }
-        <button disabled={page>=totalPages} onClick={()=>onChange(page+1)}
-          style={{ padding:"6px 14px",fontSize:12,fontWeight:600,borderRadius:7,
-            border:`1px solid ${C.border}`,background:page>=totalPages?"#f3f5f1":"#fff",
-            color:page>=totalPages?C.muted:C.text,cursor:page>=totalPages?"not-allowed":"pointer",
-            transition:"all .15s" }}>Next →</button>
-      </div>
-    </div>
-  );
-};
-
-const Donut = ({ slices=[], size=110, label="" }) => {
-  const total = slices.reduce((a,s)=>a+s.value,0)||1;
-  let cur=-90;
-  const r=42,cx=size/2,cy=size/2;
-  const rad=d=>d*Math.PI/180;
-  const arcs=slices.map(s=>{
-    const deg=(s.value/total)*360;
-    const x1=cx+r*Math.cos(rad(cur)),y1=cy+r*Math.sin(rad(cur));
-    cur+=deg;
-    const x2=cx+r*Math.cos(rad(cur)),y2=cy+r*Math.sin(rad(cur));
-    return {...s,d:`M${cx},${cy} L${x1},${y1} A${r},${r} 0 ${deg>180?1:0} 1 ${x2},${y2} Z`};
-  });
-  return (
-    <div style={{ display:"flex",alignItems:"center",gap:16 }}>
-      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-        {arcs.map((a,i)=><path key={i} d={a.d} fill={a.color}/>)}
-        <circle cx={cx} cy={cy} r={26} fill="#fff"/>
-        <text x={cx} y={cy+4} textAnchor="middle" fontSize={10} fill={C.muted} fontWeight="600">{label}</text>
-      </svg>
-      <div style={{ display:"flex",flexDirection:"column",gap:7 }}>
-        {slices.map(s=>(
-          <div key={s.label} style={{ display:"flex",alignItems:"center",gap:8,fontSize:12 }}>
-            <span style={{ width:10,height:10,borderRadius:"50%",background:s.color,flexShrink:0,display:"inline-block" }}/>
-            <span style={{ color:C.muted,flex:1 }}>{s.label}</span>
-            <span style={{ fontWeight:600,color:C.text }}>{s.value}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-};
-
-const MiniBar = ({ data=[], color=C.green, height=80 }) => {
-  if(!data.length) return null;
-  const max=Math.max(...data.map(d=>d.value),1);
-  const W=300,gap=4,bW=Math.floor((W-(data.length-1)*gap)/data.length);
-  return (
-    <svg viewBox={`0 0 ${W} ${height+18}`} style={{ width:"100%",height:height+18 }}>
-      {data.map((d,i)=>{
-        const bh=Math.max(3,(d.value/max)*height);
-        return (
-          <g key={i}>
-            <rect x={i*(bW+gap)} y={height-bh} width={bW} height={bh} rx={3}
-              fill={color} opacity={i===data.length-1?1:.55}/>
-            <text x={i*(bW+gap)+bW/2} y={height+14} textAnchor="middle"
-              fontSize={8} fill={C.muted}>{d.label}</text>
-          </g>
-        );
-      })}
-    </svg>
-  );
-};
-
-let _setToast = () => {};
-const toast = {
-  success: (msg) => _setToast({ msg, type:"success" }),
-  error:   (msg) => _setToast({ msg, type:"error" }),
-  info:    (msg) => _setToast({ msg, type:"info" }),
-};
-
-const NAV = [
-  { id:"home",     label:"Dashboard",  icon:"⊞",  badge:null },
-  { id:"shop",     label:"Shop",       icon:"🛍",  badge:null },
-  { id:"nearby",   label:"Near Me",    icon:"📍",  badge:null },
-  { id:"orders",   label:"My Orders",  icon:"📦",  badge:"orders" },
-  { id:"cart",     label:"Cart",       icon:"🛒",  badge:"cart" },
-  { id:"wishlist", label:"Wishlist",   icon:"❤️",  badge:"wishlist" },
-  { id:"reviews",  label:"My Reviews", icon:"⭐",  badge:null },
-  { id:"messages", label:"Messages",   icon:"💬",  badge:"messages" },
-  { id:"profile",  label:"Profile",    icon:"👤",  badge:null },
-  { id:"settings", label:"Settings",   icon:"⚙️",  badge:null },
-];
 
 // ═══════════════════════════════════════════════════════════════════════════
 // MAIN COMPONENT
@@ -312,6 +28,15 @@ const NAV = [
 export default function CustomerDashboard() {
   const navigate = useNavigate();
   const [section,    setSection]    = useState("home");
+  const nearby = useNearbySearch(section);
+  const {
+    nearbyQuery, setNearbyQuery, nearbyCategory, setNearbyCategory,
+    nearbyMinPrice, setNearbyMinPrice, nearbyMaxPrice, setNearbyMaxPrice,
+    nearbyRadius, setNearbyRadius, nearbyPage, setNearbyPage,
+    nearbyProducts, nearbyPagination, nearbyLoading, nearbyError,
+    nearbyLocation, setNearbyLocation, nearbyLocStatus, setNearbyLocStatus,
+    nearbyProxInfo, nearbyRankMap, requestNearbyLocation,
+  } = nearby;
   const [collapsed,  setCollapsed]  = useState(false);
   const [profile,    setProfile]    = useState(null);
   const [orders,     setOrders]     = useState([]);
@@ -443,11 +168,11 @@ export default function CustomerDashboard() {
     setNotifLoading(true);
     try {
       const params = { page, limit:NOTIF_PER_PAGE };
-      if (filter==="unread") params.read = false;
+      if (filter === "unread") params.read = false;
       const { data } = await notifAPI.getAll(params);
       const result = data.data || data;
-      const list   = result.notifications || result;
-      const total  = result.pagination?.total || list.length;
+      const list = result.notifications || result;
+      const total = result.pagination?.total || list.length;
       setNotifs(page===1 ? list : prev => [...prev,...list]);
       setNotifTotal(total);
       setUnreadCount(list.filter(n=>!n.read).length + (page>1 ? unreadCount : 0));
@@ -457,59 +182,37 @@ export default function CustomerDashboard() {
 
   useEffect(() => {
     loadNotifs(1, notifFilter);
-    const t = setInterval(() => loadNotifs(1, notifFilter), 60_000);
-    return () => clearInterval(t);
+    const timer = setInterval(() => loadNotifs(1, notifFilter), 60_000);
+    return () => clearInterval(timer);
   }, [notifFilter]);
-
   useEffect(() => {
-    const handler = (e) => {
-      if (notifRef.current && !notifRef.current.contains(e.target)) setNotifOpen(false);
+    const handler = event => {
+      if (notifRef.current && !notifRef.current.contains(event.target)) setNotifOpen(false);
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, []);
-
-  const handleMarkRead = async (id) => {
-    try {
-      await notifAPI.markRead(id);
-      setNotifs(prev => prev.map(n => n._id===id ? {...n,read:true} : n));
-      setUnreadCount(prev => Math.max(0,prev-1));
-    } catch { toast.error("Failed to mark as read"); }
+  const handleMarkRead = async id => {
+    try { await notifAPI.markRead(id); setNotifs(prev=>prev.map(n=>n._id===id?{...n,read:true}:n)); setUnreadCount(prev=>Math.max(0,prev-1)); }
+    catch { toast.error("Failed to mark as read"); }
   };
   const handleMarkAllRead = async () => {
-    try {
-      await notifAPI.markAllRead();
-      setNotifs(prev => prev.map(n => ({...n,read:true})));
-      setUnreadCount(0);
-      toast.success("All notifications marked as read");
-    } catch { toast.error("Failed to mark all as read"); }
+    try { await notifAPI.markAllRead(); setNotifs(prev=>prev.map(n=>({...n,read:true}))); setUnreadCount(0); toast.success("All notifications marked as read"); }
+    catch { toast.error("Failed to mark all as read"); }
   };
-  const handleDeleteNotif = async (id, e) => {
-    e.stopPropagation();
-    try {
-      await notifAPI.remove(id);
-      setNotifs(prev => prev.filter(n => n._id!==id));
-      setNotifTotal(prev => prev-1);
-    } catch { toast.error("Failed to delete notification"); }
+  const handleDeleteNotif = async (id, event) => {
+    event.stopPropagation();
+    try { await notifAPI.remove(id); setNotifs(prev=>prev.filter(n=>n._id!==id)); setNotifTotal(prev=>prev-1); }
+    catch { toast.error("Failed to delete notification"); }
   };
-  const handleLoadMore = () => { const n=notifPage+1; setNotifPage(n); loadNotifs(n,notifFilter); };
+  const handleLoadMore = () => { const nextPage=notifPage+1; setNotifPage(nextPage); loadNotifs(nextPage,notifFilter); };
 
-  const NOTIF_STYLE = {
-    success: { icon:"✅", accent:C.green,   bg:"#eaf3de" },
-    warning: { icon:"⚠️", accent:"#854F0B", bg:"#faeeda" },
-    alert:   { icon:"🔒", accent:C.red,     bg:"#fcebeb" },
-    info:    { icon:"ℹ️",  accent:C.blue,    bg:"#e6f1fb" },
-  };
-  const notifStyle = (type) => NOTIF_STYLE[type] || NOTIF_STYLE.info;
-
-  _setToast = setToastState;
+  registerToastSetter(setToastState);
   useEffect(() => {
-    if (toastState) { const t=setTimeout(()=>setToastState(null),3200); return ()=>clearTimeout(t); }
+    if (toastState) { const timer=setTimeout(()=>setToastState(null),3200); return ()=>clearTimeout(timer); }
   }, [toastState]);
 
-  const setLoad = (k,v) => setLoading(p => ({...p,[k]:v}));
-
-  // ── Loaders ───────────────────────────────────────────────────────────────
+  const setLoad = (key,value) => setLoading(previous => ({...previous,[key]:value}));
   const loadProfile = useCallback(async () => {
     setLoad("profile",true);
     try { const {data}=await getUserProfile(); setProfile(data.data||data); }
@@ -524,40 +227,21 @@ export default function CustomerDashboard() {
   },[]);
   const loadCart = useCallback(async () => {
     setLoad("cart",true);
-    try {
-      const {data}=await API.get("/cart");
-      const raw=data.items||data.cart?.items||[];
-      setCart(raw.map(item=>({
-        _id:item._id, productId:item.product?._id||item.product, product:item.product,
-        name:item.product?.name||item.name||"Unknown",
-        price:Number(item.product?.price??item.price??0),
-        image:item.product?.image||item.image||null,
-        vendor:item.product?.vendor||item.vendor||null,
-        quantity:item.quantity||1,
-      })));
-    } catch {}
+    try { const {data}=await API.get("/cart"); const raw=data.items||data.cart?.items||[]; setCart(raw.map(item=>({_id:item._id,productId:item.product?._id||item.product,product:item.product,name:item.product?.name||item.name||"Unknown",price:Number(item.product?.price??item.price??0),image:item.product?.image||item.image||null,vendor:item.product?.vendor||item.vendor||null,quantity:item.quantity||1}))); }
+    catch {}
     finally { setLoad("cart",false); }
   },[]);
-  const loadCategories = useCallback(async () => {
-    try { const {data}=await getCategories(); setCategories(Array.isArray(data)?data:(data.data||[])); } catch {}
-  },[]);
-  const loadProducts = useCallback(async (params={}) => {
-    setLoad("products",true);
-    try { const {data}=await API.get("/products",{params}); setProducts(data.products||data.data||data||[]); }
-    catch { toast.error("Failed to load products"); }
-    finally { setLoad("products",false); }
-  },[]);
-  const loadMyReviews = useCallback(async () => {
-    setLoad("reviews",true);
-    try { const {data}=await API.get("/reviews/mine"); setMyReviews(data.data||data||[]); }
-    catch { toast.error("Failed to load reviews"); }
-    finally { setLoad("reviews",false); }
-  },[]);
+  const loadCategories = useCallback(async () => { try { const {data}=await getCategories(); setCategories(Array.isArray(data)?data:(data.data||[])); } catch {} },[]);
+  const loadProducts = useCallback(async (params={}) => { setLoad("products",true); try { const {data}=await API.get("/products",{params}); setProducts(data.products||data.data||data||[]); } catch { toast.error("Failed to load products"); } finally { setLoad("products",false); } },[]);
+  const loadMyReviews = useCallback(async () => { setLoad("reviews",true); try { const {data}=await API.get("/reviews/mine"); setMyReviews(data.data||data||[]); } catch { toast.error("Failed to load reviews"); } finally { setLoad("reviews",false); } },[]);
   const loadConvos = useCallback(async () => {
     setLoad("convos",true);
     try { const {data}=await getConversations(); setConvos(data||[]); } catch {}
     finally { setLoad("convos",false); }
   },[]);
+
+  useEffect(()=>{ loadProfile(); loadOrders(); loadCart(); loadCategories(); },[]);
+  useEffect(()=>{ if(section==="shop") loadProducts(); if(section==="reviews") loadMyReviews(); if(section==="messages") loadConvos(); },[section]);
 
   useEffect(()=>{ loadProfile(); loadOrders(); loadCart(); loadCategories(); },[]);
   useEffect(()=>{
@@ -796,196 +480,23 @@ export default function CustomerDashboard() {
     setSelectedProduct(product);
     if (section !== "shop") setSection("shop");
   };
-  const [nearbyQuery,      setNearbyQuery]      = useState("");
-  const [nearbyCategory,   setNearbyCategory]   = useState("");
-  const [nearbyMinPrice,   setNearbyMinPrice]   = useState("");
-  const [nearbyMaxPrice,   setNearbyMaxPrice]   = useState("");
-  const [nearbyRadius,     setNearbyRadius]     = useState(50);
-  const [nearbyPage,       setNearbyPage]       = useState(1);
-  const [nearbyProducts,   setNearbyProducts]   = useState([]);
-  const [nearbyPagination, setNearbyPagination] = useState({ total:0,pages:1 });
-  const [nearbyLoading,    setNearbyLoading]    = useState(false);
-  const [nearbyError,      setNearbyError]      = useState("");
-  const [nearbyLocation,   setNearbyLocation]   = useState(null);
-  const [nearbyLocStatus,  setNearbyLocStatus]  = useState("idle");
-  const [nearbyProxInfo,   setNearbyProxInfo]   = useState(null);
-  const [nearbyRankMap,    setNearbyRankMap]    = useState({});
-  const nearbySearchRef   = useRef(null);
-  const nearbyLocationRef = useRef(null);   // ref mirror so runNearbySearch never re-creates
-  const nearbyQueryRef    = useRef("");
-  const nearbyCategoryRef = useRef("");
-  const nearbyMinPriceRef = useRef("");
-  const nearbyMaxPriceRef = useRef("");
-  const nearbyRadiusRef   = useRef(50);
-  const nearbyPageRef     = useRef(1);
-
-  // Keep refs in sync with state
-  useEffect(()=>{ nearbyLocationRef.current  = nearbyLocation;  }, [nearbyLocation]);
-  useEffect(()=>{ nearbyQueryRef.current     = nearbyQuery;     }, [nearbyQuery]);
-  useEffect(()=>{ nearbyCategoryRef.current  = nearbyCategory;  }, [nearbyCategory]);
-  useEffect(()=>{ nearbyMinPriceRef.current  = nearbyMinPrice;  }, [nearbyMinPrice]);
-  useEffect(()=>{ nearbyMaxPriceRef.current  = nearbyMaxPrice;  }, [nearbyMaxPrice]);
-  useEffect(()=>{ nearbyRadiusRef.current    = nearbyRadius;    }, [nearbyRadius]);
-  useEffect(()=>{ nearbyPageRef.current      = nearbyPage;      }, [nearbyPage]);
-
-  // Stable function — never recreated, reads from refs
-  const runNearbySearch = useCallback(async () => {
-    const loc = nearbyLocationRef.current;
-    if (!loc?.lng || !loc?.lat) return;
-    setNearbyLoading(true);
-    setNearbyError("");
-    try {
-      const params = {
-        q:        nearbyQueryRef.current    || undefined,
-        category: nearbyCategoryRef.current || undefined,
-        minPrice: nearbyMinPriceRef.current || undefined,
-        maxPrice: nearbyMaxPriceRef.current || undefined,
-        radius:   nearbyRadiusRef.current,
-        page:     nearbyPageRef.current,
-        limit:    NEARBY_LIMIT,
-        lng:      loc.lng,
-        lat:      loc.lat,
-        _t:       Date.now(),
-      };
-      Object.keys(params).forEach(k => {
-        if (params[k] === "" || params[k] === null || params[k] === undefined) delete params[k];
-      });
-      const { data } = await API.get("/search", {
-        params,
-        headers: { "Cache-Control": "no-cache", "Pragma": "no-cache" },
-      });
-      const products   = data?.data || data?.products || (Array.isArray(data) ? data : []);
-      const pagination = data?.pagination || { total: products.length, pages: 1 };
-      setNearbyProducts(products);
-      setNearbyPagination(pagination);
-      setNearbyProxInfo(data?.proximity || null);
-      if (products.length > 0) {
-        const map = {};
-        products.forEach((p, i) => { map[p._id] = i; });
-        setNearbyRankMap(map);
-      } else {
-        setNearbyRankMap({});
-      }
-    } catch(err) {
-      // ── KEY FIX: on any error, show the error message but
-      // DO NOT clear nearbyProducts — keep existing results visible ──────────
-      setNearbyError(err.response?.data?.message || "Search failed");
-      // products stay as-is, grid remains visible
-    } finally {
-      setNearbyLoading(false);
-    }
-  }, []);
-
-  // Trigger search — debounced, only when location granted
-  // runNearbySearch excluded from deps intentionally (stable ref)
-  useEffect(() => {
-    if (section !== "nearby") return;
-    if (!nearbyLocation) return;
-    clearTimeout(nearbySearchRef.current);
-    nearbySearchRef.current = setTimeout(() => runNearbySearch(), 400);
-    return () => clearTimeout(nearbySearchRef.current);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [nearbyQuery, nearbyCategory, nearbyMinPrice, nearbyMaxPrice,
-      nearbyRadius, nearbyPage, nearbyLocation, section]);
-
-  const requestNearbyLocation = () => {
-    if (!navigator.geolocation) { setNearbyLocStatus("denied"); return; }
-    setNearbyLocStatus("requesting");
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        const coords = { lng: pos.coords.longitude, lat: pos.coords.latitude };
-        nearbyLocationRef.current = coords;
-        nearbyPageRef.current = 1;
-        // ── KEY FIX: do NOT call setNearbyPage(1) here —
-        // it would trigger the useEffect twice (once for page, once for location)
-        // causing two back-to-back API calls → rate limit hit → products clear ─
-        setNearbyLocStatus("granted");
-        setNearbyLocation(coords); // single state update → single effect trigger
-        try { await API.put("/search/location", coords); } catch {}
-      },
-      () => setNearbyLocStatus("denied")
-    );
-  };
-
   // ══════════════════════════════════════════════════════════════════════════
   // RENDER SECTIONS
   // ══════════════════════════════════════════════════════════════════════════
   const renderHome = () => (
-    <div style={{display:"flex",flexDirection:"column",gap:16}}>
-      <div style={{background:`linear-gradient(120deg,${C.sidebar} 0%,#1a4d38 100%)`,borderRadius:14,padding:"24px 28px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-        <div>
-          <div style={{fontSize:12,color:"rgba(255,255,255,.55)",marginBottom:4}}>Welcome back 👋</div>
-          <div style={{fontSize:22,fontWeight:700,color:"#fff"}}>{profile?.name||"Customer"}</div>
-          <div style={{fontSize:12,color:"rgba(255,255,255,.5)",marginTop:4}}>{profile?.email}</div>
-          <div style={{display:"flex",alignItems:"center",gap:8,marginTop:10}}>
-            <span style={{fontSize:11,background:C.gold+"25",color:C.gold,padding:"3px 10px",borderRadius:20,fontWeight:600}}>{profile?.reputation?.rank||"Starter"}</span>
-            <span style={{fontSize:11,color:"rgba(255,255,255,.4)"}}>Trust score: <b style={{color:C.gold}}>{profile?.reputation?.score||0}</b>/100</span>
-          </div>
-        </div>
-        <Avatar name={profile?.name||"?"} size={60} bg={C.gold} color={C.sidebar}/>
-      </div>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:14}}>
-        <StatCard label="Total Spent"   value={fmt(totalSpent)}   sub="All paid orders"     accent={C.green}  icon="💰"/>
-        <StatCard label="Total Orders"  value={orders.length}     sub={`${deliveredCount} delivered`} accent={C.gold} icon="📦"/>
-        <StatCard label="Active Orders" value={pendingCount}      sub="In progress"         accent={C.blue}   icon="🚚"/>
-        <StatCard label="Cart Items"    value={cartCount}         sub={`${fmt(cartTotal)} total`} accent={C.red} icon="🛒"/>
-      </div>
-      <div style={{display:"grid",gridTemplateColumns:"1.4fr 1fr",gap:14}}>
-        <Panel title="Spending Over Time" subtitle="Monthly breakdown">
-          {spendingByMonth.length>0?<MiniBar data={spendingByMonth} color={C.green} height={90}/>:<Empty icon="📊" text="No spending data yet"/>}
-        </Panel>
-        <Panel title="Order Breakdown">
-          <Donut label="orders" slices={[
-            {label:"Pending",value:orderStatusCounts.pending||0,color:C.gold},
-            {label:"Processing",value:orderStatusCounts.processing||0,color:C.blue},
-            {label:"Shipped",value:orderStatusCounts.shipped||0,color:"#0c5a9e"},
-            {label:"Delivered",value:orderStatusCounts.delivered||0,color:C.green},
-          ]}/>
-        </Panel>
-      </div>
-      <div style={{display:"grid",gridTemplateColumns:"1.5fr 1fr",gap:14}}>
-        <Panel title="Recent Orders" action="View all →" onAction={()=>setSection("orders")}>
-          {loading.orders?<div style={{padding:"20px 0",textAlign:"center"}}><Spinner/></div>
-            :orders.length===0?<Empty icon="📦" text="No orders yet — go shopping!"/>
-            :orders.slice(0,5).map((o,i)=>(
-              <div key={o._id} style={{display:"flex",alignItems:"center",gap:12,padding:"10px 0",borderBottom:i<4?`1px solid ${C.border}`:"none"}}>
-                <div style={{width:38,height:38,borderRadius:10,background:STATUS[o.status?.toLowerCase()]?.bg||"#f1f1f1",display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}>
-                  {STATUS[o.status?.toLowerCase()]?.icon||"📦"}
-                </div>
-                <div style={{flex:1,minWidth:0}}>
-                  <div style={{fontWeight:500,fontSize:12.5}}>Order #{o._id?.slice(-6).toUpperCase()}</div>
-                  <div style={{fontSize:11,color:C.muted}}>{fmtDate(o.createdAt)}</div>
-                </div>
-                <div style={{textAlign:"right"}}>
-                  <div style={{fontWeight:600,fontSize:13}}>{fmt(o.totalPrice)}</div>
-                  <Pill label={o.status}/>
-                </div>
-              </div>
-            ))
-          }
-        </Panel>
-        <Panel title="Quick Actions">
-          <div style={{display:"flex",flexDirection:"column",gap:10}}>
-            {[
-              {icon:"🛍",label:"Browse Products",   action:()=>setSection("shop")},
-              {icon:"📍",label:"Find Nearby Vendors",action:()=>setSection("nearby")},
-              {icon:"📦",label:"Track My Orders",   action:()=>setSection("orders")},
-              {icon:"⭐",label:"Write a Review",    action:()=>setSection("reviews")},
-              {icon:"💬",label:"My Messages",       action:()=>setSection("messages")},
-              {icon:"👤",label:"Edit Profile",      action:()=>setSection("profile")},
-            ].map(item=>(
-              <button key={item.label} onClick={item.action}
-                style={{display:"flex",alignItems:"center",gap:12,padding:"11px 14px",borderRadius:9,border:`1px solid ${C.border}`,background:"#fafbfa",cursor:"pointer",fontSize:13,fontWeight:500,color:C.text,textAlign:"left",transition:"all .15s"}}
-                onMouseEnter={e=>{e.currentTarget.style.background=C.sidebar;e.currentTarget.style.color=C.gold;}}
-                onMouseLeave={e=>{e.currentTarget.style.background="#fafbfa";e.currentTarget.style.color=C.text;}}>
-                <span style={{fontSize:18}}>{item.icon}</span>{item.label}
-                <span style={{marginLeft:"auto",color:C.muted,fontSize:14}}>›</span>
-              </button>
-            ))}
-          </div>
-        </Panel>
-      </div>
-    </div>
+    <CustomerHome
+      profile={profile}
+      orders={orders}
+      loading={loading}
+      totalSpent={totalSpent}
+      deliveredCount={deliveredCount}
+      pendingCount={pendingCount}
+      cartCount={cartCount}
+      cartTotal={cartTotal}
+      spendingByMonth={spendingByMonth}
+      orderStatusCounts={orderStatusCounts}
+      setSection={setSection}
+    />
   );
 
   const renderShop = () => (
@@ -1369,94 +880,23 @@ export default function CustomerDashboard() {
   );
 
   const renderMessages = () => (
-    <div style={{display:"flex",height:"calc(100vh - 130px)",background:C.card,borderRadius:14,border:`1px solid ${C.border}`,overflow:"hidden",boxShadow:"0 2px 16px rgba(0,0,0,.06)"}}>
-      <div style={{width:280,borderRight:`1px solid ${C.border}`,display:"flex",flexDirection:"column",flexShrink:0}}>
-        <div style={{padding:"16px 18px",borderBottom:`1px solid ${C.border}`}}>
-          <div style={{fontWeight:700,fontSize:15,color:C.text,marginBottom:10}}>Messages</div>
-          <div style={{position:"relative"}}>
-            <span style={{position:"absolute",left:10,top:"50%",transform:"translateY(-50%)",fontSize:13,color:C.muted}}>🔍</span>
-            <input placeholder="Search conversations…" style={{width:"100%",padding:"7px 10px 7px 28px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:12,outline:"none",boxSizing:"border-box",background:"#f9fafb"}}/>
-          </div>
-        </div>
-        <div style={{flex:1,overflowY:"auto"}}>
-          {loading.convos?<div style={{padding:"30px 0",textAlign:"center"}}><Spinner/></div>
-            :convos.length===0?<div style={{padding:"40px 20px",textAlign:"center"}}><div style={{fontSize:32,marginBottom:8}}>💬</div><div style={{fontSize:12,color:C.muted}}>No conversations yet</div></div>
-            :convos.map((c,i)=>{
-              const otherId=c._id||c.userDetails?._id, otherName=c.userDetails?.name||"Unknown";
-              const isActive=activeChat?._id===otherId, unread=c.unread||0;
-              return(
-                <div key={otherId||i} onClick={()=>openChat(c)}
-                  style={{display:"flex",alignItems:"center",gap:12,padding:"12px 16px",cursor:"pointer",transition:"all .15s",background:isActive?C.sidebar:"#fff",borderBottom:`1px solid ${C.border}`}}
-                  onMouseEnter={e=>{if(!isActive)e.currentTarget.style.background="#f5f7f5";}}
-                  onMouseLeave={e=>{if(!isActive)e.currentTarget.style.background="#fff";}}>
-                  <div style={{position:"relative"}}>
-                    <Avatar name={otherName} size={42} bg={avatarColor(otherName)}/>
-                    <div style={{position:"absolute",bottom:1,right:1,width:10,height:10,borderRadius:"50%",background:"#22c55e",border:"2px solid #fff"}}/>
-                  </div>
-                  <div style={{flex:1,minWidth:0}}>
-                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:2}}>
-                      <div style={{fontWeight:600,fontSize:13,color:isActive?"#fff":C.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{otherName}</div>
-                      {unread>0&&<span style={{background:C.red,color:"#fff",fontSize:9,fontWeight:700,minWidth:16,height:16,borderRadius:20,display:"flex",alignItems:"center",justifyContent:"center",padding:"0 4px",flexShrink:0}}>{unread}</span>}
-                    </div>
-                    <div style={{fontSize:11,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",color:isActive?"rgba(255,255,255,.6)":C.muted}}>{c.lastMessage||"Start a conversation"}</div>
-                  </div>
-                </div>
-              );
-            })
-          }
-        </div>
-      </div>
-      {!activeChat?(
-        <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",color:C.muted}}>
-          <div style={{fontSize:56,marginBottom:14}}>💬</div>
-          <div style={{fontSize:16,fontWeight:600,color:C.text,marginBottom:6}}>Select a conversation</div>
-          <div style={{fontSize:13}}>Choose a chat from the left to start messaging</div>
-        </div>
-      ):(
-        <div style={{flex:1,display:"flex",flexDirection:"column",minWidth:0}}>
-          <div style={{padding:"14px 20px",borderBottom:`1px solid ${C.border}`,display:"flex",alignItems:"center",gap:12,background:"#fafbfa"}}>
-            <Avatar name={activeChat.name} size={38} bg={avatarColor(activeChat.name)}/>
-            <div style={{flex:1}}>
-              <div style={{fontWeight:700,fontSize:14,color:C.text}}>{activeChat.name}</div>
-              <div style={{fontSize:11,color:"#22c55e",fontWeight:500}}>● Online</div>
-            </div>
-            <button onClick={()=>setActiveChat(null)} style={{background:"none",border:"none",fontSize:18,cursor:"pointer",color:C.muted,padding:"4px 8px"}}>×</button>
-          </div>
-          <div style={{flex:1,overflowY:"auto",padding:"16px 20px",display:"flex",flexDirection:"column",gap:10,background:"#f8fafb"}}>
-            {chatLoading?<div style={{textAlign:"center",padding:"40px 0"}}><Spinner size={22}/></div>
-              :chatMessages.length===0?<div style={{textAlign:"center",padding:"40px 0"}}><div style={{fontSize:32,marginBottom:8}}>👋</div><div style={{fontSize:12,color:C.muted}}>Say hello to {activeChat.name}!</div></div>
-              :chatMessages.map((msg,i)=>{
-                const isOwn=msg.sender===profile?._id||msg.sender?._id===profile?._id||msg.senderId===profile?._id;
-                return(
-                  <div key={msg._id||i} style={{display:"flex",justifyContent:isOwn?"flex-end":"flex-start",alignItems:"flex-end",gap:8}}>
-                    {!isOwn&&<Avatar name={activeChat.name} size={28} bg={avatarColor(activeChat.name)}/>}
-                    <div style={{maxWidth:"68%"}}>
-                      <div style={{padding:"10px 14px",borderRadius:isOwn?"18px 18px 4px 18px":"18px 18px 18px 4px",background:isOwn?C.sidebar:"#fff",color:isOwn?"#fff":C.text,fontSize:13,lineHeight:1.5,boxShadow:"0 1px 4px rgba(0,0,0,.08)",opacity:msg.pending?.7:1}}>{msg.text}</div>
-                      <div style={{fontSize:10,color:C.muted,marginTop:3,textAlign:isOwn?"right":"left"}}>
-                        {msg.createdAt?ago(msg.createdAt):"sending…"}
-                        {isOwn&&!msg.pending&&<span style={{color:C.green,marginLeft:4}}>✓</span>}
-                      </div>
-                    </div>
-                    {isOwn&&<Avatar name={profile?.name||"?"} size={28} bg={C.gold} color={C.sidebar}/>}
-                  </div>
-                );
-              })
-            }
-            <div ref={chatBottomRef}/>
-          </div>
-          <div style={{padding:"12px 16px",borderTop:`1px solid ${C.border}`,display:"flex",gap:10,alignItems:"center",background:"#fff"}}>
-            <input value={chatInput} onChange={e=>setChatInput(e.target.value)}
-              onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();sendMessage();}}}
-              placeholder={`Message ${activeChat.name}…`}
-              style={{flex:1,padding:"10px 14px",border:`1px solid ${C.border}`,borderRadius:24,fontSize:13,outline:"none",background:"#f9fafb",transition:"border-color .15s"}}
-              onFocus={e=>e.target.style.borderColor=C.green}
-              onBlur={e=>e.target.style.borderColor=C.border}/>
-            <button onClick={sendMessage} disabled={!chatInput.trim()}
-              style={{width:40,height:40,borderRadius:"50%",border:"none",background:chatInput.trim()?C.sidebar:"#e8ede9",color:chatInput.trim()?C.gold:C.muted,cursor:chatInput.trim()?"pointer":"not-allowed",fontSize:18,display:"flex",alignItems:"center",justifyContent:"center",transition:"all .2s",flexShrink:0}}>➤</button>
-          </div>
-        </div>
-      )}
-    </div>
+    <CustomerMessages
+      colors={C}
+      conversations={convos}
+      activeChat={activeChat}
+      chatMessages={chatMessages}
+      conversationsLoading={loading.convos}
+      chatLoading={chatLoading}
+      profile={profile}
+      chatInput={chatInput}
+      setChatInput={setChatInput}
+      openChat={openChat}
+      setActiveChat={setActiveChat}
+      sendMessage={sendMessage}
+      chatBottomRef={chatBottomRef}
+      avatarColor={avatarColor}
+      ago={ago}
+    />
   );
 
   const renderProfile = () => (
@@ -1946,104 +1386,3 @@ export default function CustomerDashboard() {
   );
 }
 
-// ─── OrderTracker ─────────────────────────────────────────────────────────────
-function OrderTracker({ status }) {
-  const steps=["pending","processing","shipped","delivered"];
-  const curr=steps.indexOf(status);
-  return(
-    <div style={{display:"flex",alignItems:"center",padding:"14px 0",marginTop:8}}>
-      {steps.map((s,i)=>(
-        <div key={s} style={{display:"flex",alignItems:"center",flex:i<steps.length-1?1:"none"}}>
-          <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:4}}>
-            <div style={{width:30,height:30,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:700,background:curr>=i?"#1D9E75":"#e8ede9",color:curr>=i?"#fff":"#aaa",border:`2px solid ${curr>=i?"#1D9E75":"#e8ede9"}`,transition:"all .3s"}}>
-              {curr>i?"✓":i+1}
-            </div>
-            <span style={{fontSize:10,color:curr>=i?"#1D9E75":"#7a8c7e",textTransform:"capitalize",fontWeight:curr===i?600:400}}>{s}</span>
-          </div>
-          {i<steps.length-1&&<div style={{flex:1,height:2,margin:"0 4px",marginBottom:18,background:curr>i?"#1D9E75":"#e8ede9",transition:"background .3s"}}/>}
-        </div>
-      ))}
-    </div>
-  );
-}
-
-// ─── ProductModal ─────────────────────────────────────────────────────────────
-function ProductModal({ product, onClose, onAddToCart, addingToCart, onMessageVendor }) {
-  const [reviews,setReviews]=useState([]);
-  const [loading,setLoading]=useState(false);
-  const C2={sidebar:"#0E2A23",gold:"#C6A84B",green:"#1D9E75",red:"#D85A30",blue:"#185FA5",purple:"#533AB7",card:"#fff",border:"#e8ede9",text:"#1a2b1f",muted:"#7a8c7e"};
-  const AVATAR_COLORS2=[C2.green,C2.blue,C2.gold,C2.red,C2.purple,"#0F6E56"];
-  const avatarColor2=(s="")=>AVATAR_COLORS2[s.charCodeAt(0)%AVATAR_COLORS2.length];
-
-  useEffect(()=>{
-    if(!product?._id) return;
-    setLoading(true);
-    API.get(`/reviews/product/${product._id}`)
-      .then(({data})=>setReviews(data.data||data||[]))
-      .catch(()=>{}).finally(()=>setLoading(false));
-  },[product?._id]);
-
-  const Spinner2=({size=18})=>(<span style={{display:"inline-block",width:size,height:size,border:`2px solid ${C2.border}`,borderTopColor:C2.green,borderRadius:"50%",animation:"spin .7s linear infinite"}}/>);
-  const Stars2=({rating=0,size=14})=>(<span style={{display:"inline-flex",gap:2}}>{[1,2,3,4,5].map(i=><span key={i} style={{fontSize:size,color:i<=rating?C2.gold:"#d0d5d1"}}>★</span>)}</span>);
-  const Avatar2=({name="?",size=36,bg,color="#fff"})=>{
-    const initials=name.split(" ").slice(0,2).map(w=>w[0]).join("").toUpperCase();
-    return(<div style={{width:size,height:size,borderRadius:"50%",background:bg||avatarColor2(name),color,display:"flex",alignItems:"center",justifyContent:"center",fontSize:size*0.36,fontWeight:700,flexShrink:0}}>{initials}</div>);
-  };
-
-  return(
-    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.5)",zIndex:500,display:"flex",alignItems:"center",justifyContent:"center",padding:20}} onClick={onClose}>
-      <div style={{background:"#fff",borderRadius:14,maxWidth:700,width:"100%",maxHeight:"88vh",overflow:"auto",position:"relative"}} onClick={e=>e.stopPropagation()}>
-        <div style={{height:220,background:`linear-gradient(135deg,#e8f0ea,#c9dece)`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:80,position:"relative"}}>
-          {product.image?<img src={product.image} alt={product.name} style={{width:"100%",height:"100%",objectFit:"cover",borderRadius:"14px 14px 0 0"}}/>:"📦"}
-          <button onClick={onClose} style={{position:"absolute",top:12,right:12,width:32,height:32,borderRadius:"50%",background:"rgba(0,0,0,.4)",color:"#fff",border:"none",cursor:"pointer",fontSize:16,display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
-        </div>
-        <div style={{padding:"20px 24px"}}>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:12}}>
-            <div>
-              <h2 style={{margin:"0 0 4px",fontSize:20,color:C2.text}}>{product.name}</h2>
-              <div style={{fontSize:12,color:C2.muted}}>{product.category?.name||"Uncategorized"}</div>
-              <div style={{display:"flex",alignItems:"center",gap:6,marginTop:6}}>
-                <Stars2 rating={Math.round(product.averageRating||0)} size={14}/>
-                <span style={{fontSize:12,color:C2.muted}}>({product.totalReviews||0} reviews)</span>
-              </div>
-            </div>
-            <div style={{textAlign:"right"}}>
-              <div style={{fontSize:26,fontWeight:700,color:C2.green}}>${product.price}</div>
-              <div style={{fontSize:12,color:product.stock>0?C2.muted:C2.red}}>{product.stock>0?`${product.stock} in stock`:"Out of stock"}</div>
-            </div>
-          </div>
-          {product.description&&<p style={{fontSize:13,color:C2.muted,lineHeight:1.7,marginBottom:16}}>{product.description}</p>}
-          <button onClick={()=>onAddToCart(product._id)} disabled={product.stock===0||addingToCart===product._id}
-            style={{background:product.stock===0?"#ccc":C2.sidebar,color:product.stock===0?"#999":C2.gold,border:"none",padding:"11px 24px",borderRadius:9,fontSize:14,fontWeight:600,cursor:product.stock===0?"not-allowed":"pointer",width:"100%",marginBottom:10}}>
-            {addingToCart===product._id?"Adding…":"Add to Cart"}
-          </button>
-          {product.vendor&&(
-            <button onClick={()=>{onClose();onMessageVendor?.(product.vendor?._id||product.vendor,product.vendor?.name||"Vendor");}}
-              style={{width:"100%",padding:"10px 24px",borderRadius:9,fontSize:13,fontWeight:600,cursor:"pointer",marginBottom:20,border:`1px solid ${C2.sidebar}`,background:`${C2.sidebar}10`,color:C2.sidebar,display:"flex",alignItems:"center",justifyContent:"center",gap:6}}
-              onMouseEnter={e=>{e.currentTarget.style.background=C2.sidebar;e.currentTarget.style.color=C2.gold;}}
-              onMouseLeave={e=>{e.currentTarget.style.background=`${C2.sidebar}10`;e.currentTarget.style.color=C2.sidebar;}}>
-              💬 Message Vendor
-            </button>
-          )}
-          <div style={{borderTop:`1px solid ${C2.border}`,paddingTop:16}}>
-            <div style={{fontWeight:600,fontSize:14,marginBottom:12}}>Customer Reviews</div>
-            {loading?<div style={{textAlign:"center"}}><Spinner2/></div>
-              :reviews.length===0?<div style={{fontSize:12,color:C2.muted}}>No reviews yet</div>
-              :reviews.slice(0,4).map((r,i)=>(
-                <div key={r._id||i} style={{marginBottom:12,padding:"10px 12px",background:"#f9fafb",borderRadius:8}}>
-                  <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}>
-                    <Avatar2 name={r.user?.name||"?"} size={24} bg={avatarColor2(r.user?.name||"")}/>
-                    <span style={{fontWeight:500,fontSize:12}}>{r.user?.name||"Customer"}</span>
-                    <Stars2 rating={r.rating} size={11}/>
-                    <span style={{fontSize:11,color:C2.muted,marginLeft:"auto"}}>{Math.floor((Date.now()-new Date(r.createdAt))/86400000)}d ago</span>
-                  </div>
-                  <p style={{fontSize:12,color:C2.text,margin:0,lineHeight:1.5}}>{r.comment}</p>
-                </div>
-              ))
-            }
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}

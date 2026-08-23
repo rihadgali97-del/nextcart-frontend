@@ -1,3 +1,4 @@
+import React from "react";
 import { C } from "./constants";
 import "../../styles/customer/dashboard.css";
 

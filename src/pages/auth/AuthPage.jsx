@@ -3,7 +3,7 @@ import { Eye, EyeOff } from 'lucide-react';
 
 const AuthPage = ({ type = 'login' }) => {
   const [showPassword, setShowPassword] = React.useState(false);
-  // 🛠️ Track local role and conditional form text values inside this component layout
+  //  Track local role and conditional form text values inside this component layout
   const [role, setRole] = React.useState('vendor'); 
   const [faydaNumber, setFaydaNumber] = React.useState('');
   const [licenseNumber, setLicenseNumber] = React.useState('');
@@ -63,7 +63,7 @@ const AuthPage = ({ type = 'login' }) => {
                 </button>
               </div>
 
-              {/* 🛠️ NEW: Show Fayda & License parameters conditionally during registration if Vendor */}
+              {/* Show Fayda & License parameters conditionally during registration if Vendor */}
               {type === 'register' && role === 'vendor' && (
                 <div className="space-y-4 pt-2 border-t border-slate-100 animate-fadeIn">
                   <div>
