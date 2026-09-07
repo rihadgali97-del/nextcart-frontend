@@ -17,7 +17,7 @@ const AuthPage = ({ type = 'login' }) => {
           <div className="mb-8">
             <img 
               src="https://illustrations.popsy.co/gray/data-analysis.svg" 
-              alt="NextCart Auth" 
+              alt="GebeyaPlus Auth" 
               className="w-64 h-64 object-contain"
             />
           </div>

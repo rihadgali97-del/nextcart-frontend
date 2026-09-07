@@ -34,7 +34,7 @@ import VendorInventory from './pages/vendor/VendorInventory';
 import VendorOrders from './pages/vendor/VendorOrders';
 import VendorWallet from './pages/vendor/VendorWallet';
 import VendorReviews from './pages/vendor/VendorReviews'; 
-
+import VendorCoupons from "./pages/vendor/VendorCoupons";
 // Customer Pages
 import CustomerDashboard from './pages/customer/Customerdashboard';
 
@@ -138,7 +138,7 @@ function App() {
           <Route path="/vendor/wallet"   element={<ProtectedRoute allowedRole="vendor"><DashboardLayout><VendorWallet /></DashboardLayout></ProtectedRoute>} />
           <Route path="/vendor/reviews"  element={<ProtectedRoute allowedRole="vendor"><DashboardLayout><VendorReviews /></DashboardLayout></ProtectedRoute>} />
           <Route path="/vendor/messages" element={<ProtectedRoute allowedRole="vendor"><DashboardLayout><Messages currentUser={user} /></DashboardLayout></ProtectedRoute>} />
-
+          <Route path="/vendor/coupons" element={<VendorCoupons />} /> 
           {/* --- Customer Module --- */}
           <Route path="/customer" element={
             <ProtectedRoute allowedRole="customer">

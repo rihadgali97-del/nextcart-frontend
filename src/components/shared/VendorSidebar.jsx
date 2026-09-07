@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { 
   LayoutDashboard, Package, ShoppingCart, Wallet, 
   Settings, LogOut, Star, ShieldCheck, MessageSquare,
-  ChevronLeft, ChevronRight 
+  ChevronLeft, ChevronRight, Tag 
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import nextCartLogo from '../../assets/nextcart-logo.png';
@@ -22,6 +22,7 @@ const VendorSidebar = ({ isCollapsed, setIsCollapsed }) => {
     { id: 5, icon: MessageSquare,   label: 'Messages',       path: '/vendor/messages' },
     { id: 6, icon: Star,            label: 'Reviews',        path: '/vendor/reviews' },
     { id: 7, icon: Settings,        label: 'Settings',       path: '/settings' },
+    { id: 8, icon: Tag,             label: 'Coupons',        path: '/vendor/coupons' }
   ];
 
   const requestLogout = () => {
