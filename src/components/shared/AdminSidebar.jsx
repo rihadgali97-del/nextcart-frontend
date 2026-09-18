@@ -7,7 +7,7 @@ import {
 import { useNavigate, useLocation } from 'react-router-dom';
 
 // Import your new logo image asset
-import nextCartLogo from '../../assets/nextcart-logo.png'; 
+import nextCartLogo from '../../assets/gebeya-logo.png'; 
 
 const AdminSidebar = ({ isCollapsed, setIsCollapsed }) => {
   const navigate = useNavigate();

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { io } from "socket.io-client";
-import nextCartLogo from "../../assets/nextcart-logo.png";
+import nextCartLogo from "../../assets/gebeya-logo.png";
 import DeliveryMap from "./DeliveryMap";
 import CustomerMessages from "./CustomerMessages";
 import CustomerHome from "./CustomerHome";

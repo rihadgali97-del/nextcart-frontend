@@ -106,7 +106,7 @@ const Navbar = () => {
             );
           })}
 
-          {/* ── DESKTOP EXTERNAL SWAGGER ROUTE ── */}
+          {/* Desktop External Swagger Route */}
           <a
             href={`${BACKEND_URL}/api-docs`}
             target="_blank"
@@ -150,7 +150,7 @@ const Navbar = () => {
                 onClick={() => navigate('/register')} 
                 className="px-4 py-1.5 bg-[#c4a456] hover:bg-[#b3934b] text-[#0f2a29] font-black text-[11px] rounded-lg transition-all shadow-md shadow-[#c4a456]/10"
               >
-                {t('navbar.join')}
+                {t('navbar.join', 'Join Gebeya+')}
               </button>
             </>
           )}
@@ -184,7 +184,7 @@ const Navbar = () => {
               </Link>
             ))}
             
-            {/* ── MOBILE EXTERNAL SWAGGER ROUTE ── */}
+            {/* Mobile External Swagger Route */}
             <a
               href={`${BACKEND_URL}/api-docs`}
               target="_blank"
@@ -206,7 +206,7 @@ const Navbar = () => {
             ) : (
               <>
                 <button onClick={() => { setMobileOpen(false); navigate('/login'); }} className="w-full text-left px-4 py-2 text-white/80 rounded-md">{t('navbar.signIn')}</button>
-                <button onClick={() => { setMobileOpen(false); navigate('/register'); }} className="w-full text-left px-4 py-2 bg-[#c4a456] text-[#0f2a29] font-black rounded-md">{t('navbar.join')}</button>
+                <button onClick={() => { setMobileOpen(false); navigate('/register'); }} className="w-full text-left px-4 py-2 bg-[#c4a456] text-[#0f2a29] font-black rounded-md">{t('navbar.join', 'Join Gebeya+')}</button>
               </>
             )}
           </div>

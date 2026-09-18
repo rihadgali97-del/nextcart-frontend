@@ -1,7 +1,7 @@
 import React from "react";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import nextCartLogo from "../../assets/nextcart-logo.png";
+import nextCartLogo from "../../assets/gebeya-logo.png";
 import "../../styles/admin/admin-dashboard.css";
 import API, {
   getAdminStats,

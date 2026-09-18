@@ -5,7 +5,7 @@ import {
   ChevronLeft, ChevronRight, Tag 
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import nextCartLogo from '../../assets/nextcart-logo.png';
+import nextCartLogo from '../../assets/gebeya-logo.png';
 import VendorToast from './VendorToast';
 
 const VendorSidebar = ({ isCollapsed, setIsCollapsed }) => {

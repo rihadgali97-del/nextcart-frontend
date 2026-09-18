@@ -1,25 +1,24 @@
-// src/components/common/Logo.jsx
 import React from 'react';
-import nextCartLogo from '../../assets/nextcart-logo.png'; 
+import gebeyaLogo from '../../assets/gebeya-logo.png'; 
 import '../../styles/common/logo.css';
 
 const Logo = ({ className = "h-10", showText = true, lightText = false }) => {
   return (
     <div className={`brand-logo ${className}`}>
       
-      {/* Container that crops the image to ONLY show the upper cart/arrow graphic */}
+      {/* Icon Graphic Container */}
       <div className="brand-logo__mark">
         <img 
-          src={nextCartLogo} 
-          alt="NextCart Icon" 
+          src={gebeyaLogo} 
+          alt="Gebeya+ Icon" 
           className="brand-logo__image" 
         />
       </div>
 
-      {/* Dynamic typography that handles layout adjustments and light/dark modes */}
+      {/* Dynamic typography rendering Gebeya+ */}
       {showText && (
         <span className={`brand-logo__text ${lightText ? 'brand-logo__text--light' : ''}`}>
-          Gebeya<span className="brand-logo__accent">Plus</span>
+          Gebeya<span className="brand-logo__accent">+</span>
         </span>
       )}
     </div>
