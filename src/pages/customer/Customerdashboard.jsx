@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { io } from "socket.io-client";
-import nextCartLogo from "../../assets/gebeya-logo.png";
+import gebeyaPlusLogo from "../../assets/gebeya-logo.png";
 import API, { getUserProfile, updateProfile, changePassword, getCategories, getConversations } from "../../services/api";
 
 import { C, NAV, notifStyle, avatarColor, PRODUCTS_PER_PAGE } from "./constants";
@@ -318,7 +318,7 @@ export default function CustomerDashboard() {
           flexShrink:0,transition:"width .25s cubic-bezier(.4,0,.2,1)",overflow:"hidden",position:"relative"}}>
           <div style={{padding:"18px 14px 14px",borderBottom:"1px solid rgba(255,255,255,.08)",display:"flex",alignItems:"center",gap:10,minHeight:70}}>
             <div style={{width:36,height:36,borderRadius:"50%",background:"#fff",overflow:"hidden",display:"flex",alignItems:"flex-start",justifyContent:"center",flexShrink:0,boxShadow:"0 2px 8px rgba(0,0,0,.2)"}}>
-              <img src={nextCartLogo} alt="NextCart" style={{width:50,maxWidth:"none",transform:"scale(1.5) translateY(-2px)",objectFit:"contain"}}/>
+              <img src={gebeyaPlusLogo} alt="Gebeya+" style={{width:50,maxWidth:"none",transform:"scale(1.5) translateY(-2px)",objectFit:"contain"}}/>
             </div>
             {!collapsed&&(
               <div style={{overflow:"hidden"}}>
