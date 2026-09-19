@@ -30,7 +30,7 @@ const ManageUsers = () => {
     }
   };
 
-  if (loading) return <div className="p-10 text-center font-bold text-ncTeal animate-pulse">Loading NextCart Database...</div>;
+  if (loading) return <div className="p-10 text-center font-bold text-ncTeal animate-pulse">Loading GebeyaPlus Database...</div>;
 
   return (
     <div className="p-8 bg-[#f8fafc] min-h-screen">

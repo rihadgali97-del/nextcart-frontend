@@ -125,7 +125,7 @@ export default function VendorDashboard() {
         </div>
         <div className="flex items-center gap-2 bg-white px-4 py-2.5 rounded-2xl border border-slate-100 shadow-sm">
           <Activity size={14} className="text-[#c4a456]" />
-          <span className="text-xs font-black text-slate-500 uppercase tracking-wider">NextCart DB · Live</span>
+          <span className="text-xs font-black text-slate-500 uppercase tracking-wider">GebeyaPlus DB · Live</span>
         </div>
       </div>
 

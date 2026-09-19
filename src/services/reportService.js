@@ -27,7 +27,7 @@ export const downloadVendorAudit = async () => {
   link.href = url;
   
   // Force the browser to treat it as a download, not a preview
-  link.setAttribute('download', `NextCart_Audit_Final.pdf`);
+  link.setAttribute('download', `GebeyaPlus_Audit_Final.pdf`);
   document.body.appendChild(link);
   link.click();
 

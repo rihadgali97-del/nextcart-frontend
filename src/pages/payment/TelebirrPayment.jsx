@@ -145,7 +145,7 @@ export default function TelebirrPayment() {
           ← Back to Storefront
         </button>
         <div style={{ fontSize: 13, fontWeight: 700, color: C.sidebar }}>
-          Next<span style={{ color: C.gold }}>Cart</span>
+          Gebeya<span style={{ color: C.gold }}>Plus</span>
         </div>
       </div>
 
@@ -198,7 +198,7 @@ export default function TelebirrPayment() {
                 </div>
                 {[
                   { label: "Order ID",       value: `#${orderId?.slice(-8).toUpperCase()}` },
-                  { label: "Merchant",        value: "NextCart" },
+                  { label: "Merchant",        value: "GebeyaPlus" },
                   { label: "Short Code",      value: "963499" },
                   { label: "Payment Method",  value: "Telebirr H5" },
                   { label: "Amount",          value: `${totalAmount.toFixed(2)} ETB`, bold: true, color: C.tBlue },

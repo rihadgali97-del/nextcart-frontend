@@ -96,7 +96,7 @@ const Footer = () => {
           <div>
             <h3 className="text-sm font-black uppercase tracking-[0.18em] text-[#c4a456]">Contact</h3>
             <div className="mt-5 space-y-4 text-sm text-white/64">
-              <a href="mailto:support@nextcart.com" className="flex items-center gap-3 transition-colors hover:text-white">
+              <a href="mailto:support@gebeyaplus.com" className="flex items-center gap-3 transition-colors hover:text-white">
                 <Mail size={17} className="text-[#c4a456]" />
                 support@gebeyaplus.com
               </a>

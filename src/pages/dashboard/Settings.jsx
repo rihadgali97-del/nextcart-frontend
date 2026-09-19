@@ -68,7 +68,7 @@ const Settings = () => {
             <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
               <h2 className="text-2xl font-bold text-slate-900 mb-4">Notifications</h2>
               <p className="text-slate-500 text-sm mb-12 leading-relaxed max-w-md">
-                Choose how you'd like to be notified about important events and updates across your NextCart projects.
+                Choose how you'd like to be notified about important events and updates across your GebeyaPlus projects.
               </p>
 
               <div className="space-y-2">

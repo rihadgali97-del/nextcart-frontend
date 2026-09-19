@@ -128,7 +128,7 @@ export default function Settings() {
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-black tracking-tight" style={{ color:C.dark }}>Account Settings</h1>
-        <p className="text-slate-500 font-medium mt-1 text-sm">Manage your NextCart vendor identity and security</p>
+        <p className="text-slate-500 font-medium mt-1 text-sm">Manage your GebeyaPlus vendor identity and security</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
@@ -265,7 +265,7 @@ export default function Settings() {
             <div className="space-y-8">
               <div>
                 <h3 className="font-black text-lg mb-1" style={{ color:C.dark }}>Notification Preferences</h3>
-                <p className="text-sm text-slate-400 font-medium">Control how NextCart reaches you</p>
+                <p className="text-sm text-slate-400 font-medium">Control how GebeyaPlus reaches you</p>
               </div>
               <div className="space-y-3">
                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Email</p>

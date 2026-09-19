@@ -1,4 +1,4 @@
-// ─── Design tokens (matches Admin dashboard) ──────────────────────────────────
+// ─── Design tokens ─────────────────────────────────────────────────────────────
 export const C = {
   sidebar:      "#0E2A23",
   sidebarHover: "#1a3d2f",
@@ -14,7 +14,6 @@ export const C = {
   muted:        "#7a8c7e",
 };
 
-// ─── Order status styling ──────────────────────────────────────────────────────
 export const STATUS = {
   pending:    { bg:"#faeeda", color:"#854F0B", icon:"⏳" },
   processing: { bg:"#e6f1fb", color:"#185FA5", icon:"⚙️" },
@@ -23,26 +22,21 @@ export const STATUS = {
   cancelled:  { bg:"#fcebeb", color:"#A32D2D", icon:"✕"  },
 };
 
-// ─── Notification type styling ─────────────────────────────────────────────────
 export const NOTIF_STYLE = {
-  success: { icon:"✅", accent:C.green,  bg:"#eaf3de" },
+  success: { icon:"✅", accent:C.green,   bg:"#eaf3de" },
   warning: { icon:"⚠️", accent:"#854F0B", bg:"#faeeda" },
-  alert:   { icon:"🔒", accent:C.red,    bg:"#fcebeb" },
-  info:    { icon:"ℹ️",  accent:C.blue,   bg:"#e6f1fb" },
+  alert:   { icon:"🔒", accent:C.red,     bg:"#fcebeb" },
+  info:    { icon:"ℹ️",  accent:C.blue,    bg:"#e6f1fb" },
 };
 export const notifStyle = (type) => NOTIF_STYLE[type] || NOTIF_STYLE.info;
 
-// ─── Avatar palette ─────────────────────────────────────────────────────────────
 export const AVATAR_COLORS = [C.green, C.blue, C.gold, C.red, C.purple, "#0F6E56"];
-export const avatarColor = (s="") => AVATAR_COLORS[s.charCodeAt(0) % AVATAR_COLORS.length];
+export const avatarColor   = (s="") => AVATAR_COLORS[s.charCodeAt(0) % AVATAR_COLORS.length];
 
-// ─── Pagination sizes ───────────────────────────────────────────────────────────
 export const ITEMS_PER_PAGE    = 5;
 export const PRODUCTS_PER_PAGE = 12;
-export const NOTIF_PER_PAGE    = 8;
 export const NEARBY_LIMIT      = 12;
 
-// ─── Sidebar navigation config ─────────────────────────────────────────────────
 export const NAV = [
   { id:"home",     label:"Dashboard",  icon:"⊞",  badge:null },
   { id:"shop",     label:"Shop",       icon:"🛍",  badge:null },

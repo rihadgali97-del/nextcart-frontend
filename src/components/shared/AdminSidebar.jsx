@@ -7,7 +7,7 @@ import {
 import { useNavigate, useLocation } from 'react-router-dom';
 
 // Import your new logo image asset
-import nextCartLogo from '../../assets/gebeya-logo.png'; 
+import gebeyaPlusLogo from '../../assets/gebeya-logo.png'; 
 
 const AdminSidebar = ({ isCollapsed, setIsCollapsed }) => {
   const navigate = useNavigate();
@@ -41,8 +41,8 @@ const AdminSidebar = ({ isCollapsed, setIsCollapsed }) => {
           {/* Logo Cropped Inside a Clean White Circle Container */}
           <div className="w-10 h-10 rounded-full overflow-hidden flex items-start justify-center bg-white min-w-[40px] shadow-lg shadow-black/10">
             <img 
-              src={nextCartLogo} 
-              alt="NextCart Symbol" 
+              src={gebeyaPlusLogo} 
+              alt="Gebeya Plus Symbol" 
               className="w-14 max-w-none scale-[1.5] -translate-y-0.5 object-contain" 
             />
           </div>
@@ -50,7 +50,7 @@ const AdminSidebar = ({ isCollapsed, setIsCollapsed }) => {
           {/* Inline Text Header (Hidden smoothly when collapsed) */}
           {!isCollapsed && (
             <h1 className="text-2xl font-black tracking-tight animate-in fade-in slide-in-from-left-2 duration-500 whitespace-nowrap text-white">
-              Next<span className="text-[#c4a456]">Cart</span>
+              Gebeya<span className="text-[#c4a456]">Plus</span>
             </h1>
           )}
         </div>
@@ -144,7 +144,7 @@ const AdminSidebar = ({ isCollapsed, setIsCollapsed }) => {
           </button>
         </div>
         {!isCollapsed && (
-          <p className="text-[9px] text-center text-white/10 mt-5 uppercase tracking-[0.4em] font-medium animate-in fade-in">NextCart • BiT 2026</p>
+          <p className="text-[9px] text-center text-white/10 mt-5 uppercase tracking-[0.4em] font-medium animate-in fade-in">GebeyaPlus • BiT 2026</p>
         )}
       </div>
     </aside>

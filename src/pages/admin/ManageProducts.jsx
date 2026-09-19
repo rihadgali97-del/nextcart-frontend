@@ -24,7 +24,7 @@ const ManageProducts = () => {
   useEffect(() => { fetchProducts(); }, []);
 
   const handleDelete = async (id) => {
-    if (window.confirm("Delete this product from NextCart?")) {
+    if (window.confirm("Delete this product from GebeyaPlus?")) {
       try {
         await deleteProduct(id);
         fetchProducts();
@@ -105,7 +105,7 @@ const ManageProducts = () => {
                     </div>
                   </td>
                   <td className="px-8 py-5 text-sm font-medium text-slate-600">
-                    {product.vendor?.businessName || 'NextCart Official'}
+                    {product.vendor?.businessName || 'GebeyaPlus Official'}
                   </td>
                   <td className="px-8 py-5 font-bold text-[#0f2a29]">
                     ${product.price.toFixed(2)}

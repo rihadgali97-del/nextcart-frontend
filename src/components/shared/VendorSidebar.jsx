@@ -5,7 +5,7 @@ import {
   ChevronLeft, ChevronRight, Tag 
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import nextCartLogo from '../../assets/gebeya-logo.png';
+import gebeyaPlusLogo from '../../assets/gebeya-logo.png';
 import VendorToast from './VendorToast';
 
 const VendorSidebar = ({ isCollapsed, setIsCollapsed }) => {
@@ -48,11 +48,11 @@ const VendorSidebar = ({ isCollapsed, setIsCollapsed }) => {
       {/* Logo + Toggle */}
       <div className="flex items-center justify-between mb-8 px-2 min-h-[52px]">
         <div className="flex items-center gap-3 overflow-hidden">
-          {/* Real NextCart logo — same treatment as AdminSidebar */}
+          {/* Real gebeya logo — same treatment as AdminSidebar */}
           <div className="w-10 h-10 rounded-full overflow-hidden bg-white flex items-start justify-center min-w-[40px] shadow-lg shadow-black/20">
             <img
-              src={nextCartLogo}
-              alt="NextCart"
+              src={gebeyaPlusLogo}
+              alt="Gebeya Plus"
               className="w-14 max-w-none scale-[1.5] -translate-y-0.5 object-contain"
             />
           </div>
@@ -156,7 +156,7 @@ const VendorSidebar = ({ isCollapsed, setIsCollapsed }) => {
 
         {!isCollapsed && (
           <p className="text-[9px] text-center text-white/10 mt-2 uppercase tracking-[0.3em]">
-            NextCart · BiT 2026
+            GebeyaPlus · BiT 2026
           </p>
         )}
       </div>

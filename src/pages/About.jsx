@@ -47,7 +47,7 @@ const About = () => {
       {/* Grid Features Structure Layout */}
       <section className="about-pillars">
         <div className="about-pillars__inner">
-          <SectionHeader tag="Core Infrastructure" title="The Structural Pillars of NextCart" alignment="center" />
+          <SectionHeader tag="Core Infrastructure" title="The Structural Pillars of GebeyaPlus" alignment="center" />
           <div className="about-pillar-grid">
             {corporatePillars.map((pillar, i) => (
               <div key={i} className="about-pillar">

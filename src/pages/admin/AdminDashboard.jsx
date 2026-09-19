@@ -1,7 +1,7 @@
 import React from "react";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import nextCartLogo from "../../assets/gebeya-logo.png";
+import gebeyaPlusLogo from "../../assets/gebeya-logo.png";
 import "../../styles/admin/admin-dashboard.css";
 import API, {
   getAdminStats,
@@ -1113,14 +1113,14 @@ const loadProducts = useCallback(async () => {
           {/* Logo + toggle */}
           <div className={`admin-dashboard__brand ${collapsed ? "admin-dashboard__brand--collapsed" : ""}`}>
             <div className="admin-dashboard__brand-content">
-              {/* Real NextCart logo */}
+              {/* Real Gebeya Plus logo */}
               <div className="admin-dashboard__logo-mark">
-                <img src={nextCartLogo} alt="NextCart"
+                <img src={gebeyaPlusLogo} alt="Gebeya Plus Logo"
                   className="admin-dashboard__logo"/>
               </div>
               {!collapsed && (
                 <h1 className="admin-dashboard__brand-name">
-                  Next<span className="admin-dashboard__brand-accent">Cart</span>
+                  Gebeya<span className="admin-dashboard__brand-accent">Plus</span>
                 </h1>
               )}
             </div>
@@ -1200,7 +1200,7 @@ const loadProducts = useCallback(async () => {
             {!collapsed && (
               <p style={{ textAlign:"center", fontSize:9, color:"rgba(255,255,255,.1)",
                 marginTop:14, letterSpacing:".4em", textTransform:"uppercase" }}>
-                NextCart • BiT 2026
+                GebeyaPlus • BiT 2026
               </p>
             )}
           </div>
