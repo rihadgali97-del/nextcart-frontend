@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { getAllReviews, reportReview } from '../../services/api';
+import { toast } from '../../services/toast';
 import { Star, MessageSquare, AlertTriangle, User, Loader2, Search, ThumbsUp, Flag, RefreshCw } from 'lucide-react';
 
 const C = { dark:'#0f2a29', gold:'#c4a456', light:'#f8fafb', border:'#e8ede9', muted:'#7a8c7e' };
@@ -34,7 +35,7 @@ export default function VendorReviews() {
   const showMsg = (type,text) => { setMsg({type,text}); setTimeout(()=>setMsg(null),3500); };
 
   const handleReport = async (id) => {
-    if (!window.confirm('Report this review for moderation?')) return;
+    if (!await toast.confirm('Report this review for moderation?', 'Report')) return;
     try {
       await reportReview(id, 'Potential spam or fake review');
       setReviews(prev => prev.map(r => r._id===id ? {...r,reported:true} : r));

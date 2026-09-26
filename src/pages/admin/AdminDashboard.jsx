@@ -19,6 +19,7 @@ import API, {
   getAdminSettings,
   updateAdminSettings,
 } from "../../services/api";
+import { toast as appToast } from "../../services/toast";
 import { ActionBtn, Pagination, SettingRow } from "./AdminDashboardControls";
 
 // ─── Tiny helpers ─────────────────────────────────────────────────────────────
@@ -354,10 +355,11 @@ export default function AdminDashboard() {
   });
 
   // ── Logout ────────────────────────────────────────────────────────────────
-  const handleLogout = () => {
-    if (!window.confirm("Log out of admin panel?")) return;
+  const handleLogout = async () => {
+    if (!await appToast.confirm("Log out of admin panel?", "Log out")) return;
     localStorage.removeItem("token");
     localStorage.removeItem("user");
+    appToast.success("You have been logged out.");
     navigate("/login");
   };
 
@@ -463,7 +465,7 @@ const loadProducts = useCallback(async () => {
 
   // ── Actions ───────────────────────────────────────────────────────────────
   const handleDeleteUser = async (id) => {
-    if (!window.confirm("Delete this user?")) return;
+    if (!await appToast.confirm("Delete this user?", "Delete")) return;
     try { await deleteUser(id); notify("User deleted"); loadUsers(page.users); }
     catch { notify("Failed to delete user", "error"); }
   };
@@ -479,7 +481,7 @@ const loadProducts = useCallback(async () => {
   };
 
   const handleDeleteProduct = async (id) => {
-    if (!window.confirm("Delete this product?")) return;
+    if (!await appToast.confirm("Delete this product?", "Delete")) return;
     try { await deleteProduct(id); notify("Product deleted"); loadProducts(); }
     catch { notify("Failed to delete product", "error"); }
   };

@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { ShoppingBag, Search, User, LogOut, Menu, X, Terminal } from 'lucide-react';
 import Logo from './Logo';
 import LanguageSelector from './LanguageSelector';
+import { toast } from '../../services/toast';
 
 const Navbar = () => {
   const { t } = useTranslation();
@@ -33,8 +34,10 @@ const Navbar = () => {
     navigate(`/search?q=${encodeURIComponent(trimmed)}`);
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    if (!await toast.confirm('Are you sure you want to log out?', 'Log out')) return;
     localStorage.clear();
+    toast.success('You have been logged out.');
     navigate('/login');
   };
 

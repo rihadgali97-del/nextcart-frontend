@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Trash2, Edit, Search, UserPlus, Mail, Shield } from 'lucide-react';
 import { getUsers, deleteUser } from '../../services/api'; // Ensure these are exported in your api.js
+import { toast } from '../../services/toast';
 
 const ManageUsers = () => {
   const [users, setUsers] = useState([]);
@@ -20,12 +21,12 @@ const ManageUsers = () => {
   useEffect(() => { fetchUsers(); }, []);
 
   const handleDelete = async (id) => {
-    if (window.confirm("Are you sure you want to delete this user?")) {
+    if (await toast.confirm("Are you sure you want to delete this user?", "Delete")) {
       try {
         await deleteUser(id);
         fetchUsers(); // Refresh list
       } catch (err) {
-        alert("Failed to delete user");
+        toast.error("Failed to delete user");
       }
     }
   };

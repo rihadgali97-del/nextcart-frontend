@@ -4,6 +4,7 @@ import {
   History, Truck, Percent, AlertTriangle, Database, Mail, Smartphone
 } from 'lucide-react';
 import { getUserProfile, getAdminSettings, updateAdminSettings, getAuditLogs, updateProfile } from '../../services/api';
+import { toast } from '../../services/toast';
 
 const displayIp = (ip) => {
   if (!ip) return 'Unavailable';
@@ -74,13 +75,13 @@ const SystemSettings = () => {
     try {
       if (activeTab === 'profile') {
         await updateProfile(profile);
-        alert("Personal profile updated.");
+        toast.success("Personal profile updated.");
       } else {
         await updateAdminSettings(adminConfig);
-        alert("System parameters updated successfully.");
+        toast.success("System parameters updated successfully.");
       }
     } catch (err) { 
-      alert("Error saving changes."); 
+      toast.error("Error saving changes."); 
     } finally { 
       setLoading(false); 
     }

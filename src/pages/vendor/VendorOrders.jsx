@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { getVendorOrders, updateOrderStatus } from '../../services/api';
+import { toast } from '../../services/toast';
 import VendorDeliveryMap from './VendorDeliveryMap';
 import {
   Package, Search, TrendingUp, CheckCircle, DollarSign,
@@ -49,7 +50,7 @@ export default function VendorOrders() {
       await updateOrderStatus(orderId, newStatus);
       setOrders(prev => prev.map(o => o._id===orderId ? {...o,status:newStatus} : o));
       if (selectedOrder?._id===orderId) setSelectedOrder(p=>({...p,status:newStatus}));
-    } catch { alert('Failed to update status'); }
+    } catch { toast.error('Failed to update status'); }
     finally { setUpdating(false); }
   };
 

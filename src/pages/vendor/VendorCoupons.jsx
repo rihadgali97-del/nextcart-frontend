@@ -1,6 +1,7 @@
 import React from "react";
 import { useState, useEffect } from "react";
 import API from "../../services/api";
+import { toast } from "../../services/toast";
 import { Tag, Plus, Trash2, Edit3, X, Check, RefreshCw } from "lucide-react";
 
 const C = { dark:"#0f2a29", gold:"#c4a456", light:"#f8fafb", border:"#e8ede9", muted:"#7a8c7e" };
@@ -82,11 +83,11 @@ export default function VendorCoupons() {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm("Delete this coupon?")) return;
+    if (!await toast.confirm("Delete this coupon?", "Delete")) return;
     try {
       await API.delete(`/coupons/vendor/${id}`);
       setCoupons(prev => prev.filter(c => c._id !== id));
-    } catch { alert("Failed to delete coupon"); }
+    } catch { toast.error("Failed to delete coupon"); }
   };
 
   const toggleActive = async (coupon) => {

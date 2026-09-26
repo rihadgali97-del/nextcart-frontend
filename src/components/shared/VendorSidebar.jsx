@@ -59,7 +59,7 @@ const VendorSidebar = ({ isCollapsed, setIsCollapsed }) => {
           {!isCollapsed && (
             <div className="animate-in fade-in slide-in-from-left-2 duration-300 overflow-hidden">
               <h1 className="text-xl font-black tracking-tight whitespace-nowrap">
-                Next<span className="text-[#c4a456]">Cart</span>
+                GebeyaPlus
               </h1>
               <span className="text-[#c4a456] text-[9px] uppercase font-black tracking-[0.2em]">
                 Vendor Pro

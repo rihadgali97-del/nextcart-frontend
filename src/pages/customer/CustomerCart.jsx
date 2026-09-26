@@ -129,6 +129,7 @@ export default function CustomerCart({
                   style={{padding:"9px 12px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:13,background:"#fff",color:C.text}}>
                   <option value="cash">Cash on Delivery</option>
                   <option value="telebirr">Telebirr</option>
+                  <option value="chapa">Chapa</option>
                   <option value="cbe">CBE Birr</option>
                   <option value="stripe">Stripe</option>
                 </select>

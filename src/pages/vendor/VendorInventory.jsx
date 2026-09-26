@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { getVendorInventory, deleteProduct, getCategories, addProduct } from '../../services/api';
+import { toast } from '../../services/toast';
 import {
   Edit3, Trash2, Plus, Package, Search,
   BarChart3, TrendingUp, AlertCircle, X, Star, RefreshCw, Upload, Loader
@@ -99,7 +100,7 @@ export default function VendorInventory() {
   );
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Delete this product?')) return;
+    if (!await toast.confirm('Delete this product?', 'Delete')) return;
     try {
       await deleteProduct(id);
       setProducts(prev => prev.filter(p=>p._id!==id));

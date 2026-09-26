@@ -25,6 +25,7 @@ export default function PaymentSuccess() {
 
   const orderId = params.get("orderId") || localStorage.getItem("pending_order_id");
   const isMock  = params.get("mock") === "true";
+  const provider = params.get("provider");
   const method  = localStorage.getItem("pending_payment_method") || "telebirr";
 
   useEffect(() => {
@@ -39,7 +40,15 @@ export default function PaymentSuccess() {
   const verifyPayment = async () => {
     setStatus("verifying");
     try {
-      if (isMock) {
+      if (provider === "chapa") {
+        if (params.get("payment") === "failed") throw new Error("Chapa did not confirm this payment.");
+        const txRef = localStorage.getItem("pending_payment_reference");
+        const { data } = await API.post(`/payments/chapa/verify/${orderId}`, { tx_ref: txRef });
+        try { await API.delete("/cart"); } catch { /* Payment is confirmed; cart cleanup can be retried later. */ }
+        setOrder(data.order || { _id: orderId });
+        setStatus("success");
+        setMessage("Payment verified! Your order is confirmed.");
+      } else if (isMock) {
         // ── Sandbox / DNS-blocked simulation ────────────────────────────────
         // Mark order as paid via your verify endpoint
         const { data } = await API.put(`/payment/verify/${orderId}`, {
@@ -77,6 +86,7 @@ export default function PaymentSuccess() {
       // Clean up localStorage
       localStorage.removeItem("pending_order_id");
       localStorage.removeItem("pending_payment_method");
+      localStorage.removeItem("pending_payment_reference");
     }
   };
 
@@ -97,7 +107,7 @@ export default function PaymentSuccess() {
         <div style={{ marginBottom: 28 }}>
           <div style={{ fontSize: 13, fontWeight: 800, color: C.sidebar,
             letterSpacing: "-.2px" }}>
-            Next<span style={{ color: C.gold }}>Cart</span>
+            GebeyaPlus
           </div>
         </div>
 
@@ -112,7 +122,7 @@ export default function PaymentSuccess() {
               Verifying Payment…
             </div>
             <div style={{ fontSize: 13, color: C.muted }}>
-              Please wait while we confirm your payment with Telebirr.
+              Please wait while we confirm your payment.
             </div>
           </>
         )}

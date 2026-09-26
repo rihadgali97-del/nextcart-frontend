@@ -4,6 +4,7 @@ import {
   Plus, Search, Filter, ExternalLink, MoreVertical 
 } from 'lucide-react';
 import { getAdminProducts, deleteProduct } from '../../services/api';
+import { toast } from '../../services/toast';
 
 const ManageProducts = () => {
   const [products, setProducts] = useState([]);
@@ -24,12 +25,12 @@ const ManageProducts = () => {
   useEffect(() => { fetchProducts(); }, []);
 
   const handleDelete = async (id) => {
-    if (window.confirm("Delete this product from GebeyaPlus?")) {
+    if (await toast.confirm("Delete this product from GebeyaPlus?", "Delete")) {
       try {
         await deleteProduct(id);
         fetchProducts();
       } catch (err) {
-        alert("Action failed.");
+        toast.error("Action failed.");
       }
     }
   };

@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import API from "../../services/api";
+import { toast } from "../../services/toast";
 import { C, ITEMS_PER_PAGE } from "./constants";
 import { ago } from "./helpers";
 import { Panel, Input, Btn, Stars, Empty, Spinner, Pagination } from "./UI";
@@ -11,21 +12,22 @@ export default function CustomerReviews({ myReviews, loading, loadMyReviews }) {
   const [reviewsPage,  setReviewsPage]  = useState(1);
 
   const handleSubmit = async () => {
-    if (!reviewForm.productId) { alert("Enter a product ID"); return; }
-    if (!reviewForm.comment.trim()) { alert("Write a comment"); return; }
+    if (!reviewForm.productId) { toast.error("Enter a product ID"); return; }
+    if (!reviewForm.comment.trim()) { toast.error("Write a comment"); return; }
     setSubmitting(true);
     try {
       await API.post("/reviews", reviewForm);
       setReviewForm({ productId:"", rating:5, comment:"" });
       loadMyReviews();
-    } catch(err) { alert(err.response?.data?.message||"Failed to submit"); }
+      toast.success("Review submitted.");
+    } catch(err) { toast.error(err.response?.data?.message||"Failed to submit"); }
     finally { setSubmitting(false); }
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm("Delete this review?")) return;
-    try { await API.delete(`/reviews/${id}`); loadMyReviews(); }
-    catch { alert("Failed to delete review"); }
+    if (!await toast.confirm("Delete this review?", "Delete")) return;
+    try { await API.delete(`/reviews/${id}`); loadMyReviews(); toast.success("Review deleted."); }
+    catch { toast.error("Failed to delete review"); }
   };
 
   const filtered = myReviews.filter(r =>

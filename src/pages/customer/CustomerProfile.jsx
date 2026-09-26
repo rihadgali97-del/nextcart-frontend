@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import API from "../../services/api";
 import { updateProfile, changePassword } from "../../services/api";
+import { toast } from "../../services/toast";
 import { C } from "./constants";
 import { fmtDate } from "./helpers";
 import { Panel, Avatar, Input, Btn } from "./UI";
@@ -21,8 +22,8 @@ export default function CustomerProfile({ profile, setProfile, handleLogout }) {
 
   const handleSaveProfile = async () => {
     setSavingProfile(true);
-    try { const {data}=await updateProfile(profileForm); setProfile(data.data||data); }
-    catch { alert("Failed to update profile"); }
+    try { const {data}=await updateProfile(profileForm); setProfile(data.data||data); toast.success("Profile updated."); }
+    catch { toast.error("Failed to update profile"); }
     finally { setSavingProfile(false); }
   };
 
@@ -37,14 +38,15 @@ export default function CustomerProfile({ profile, setProfile, handleLogout }) {
     try {
       await changePassword({ currentPassword:pwForm.currentPassword, newPassword:pwForm.newPassword });
       setPwForm({ currentPassword:"", newPassword:"", confirmPassword:"" });
-    } catch(err) { alert(err.response?.data?.message||"Failed to change password"); }
+      toast.success("Password changed.");
+    } catch(err) { toast.error(err.response?.data?.message||"Failed to change password"); }
     finally { setSavingPw(false); }
   };
 
   const handleSaveNotif = async () => {
     setSavingNotif(true);
     try { await API.put("/profile/notifications",{ notifications:notifSettings }); }
-    catch { alert("Failed to save preferences"); }
+    catch { toast.error("Failed to save preferences"); }
     finally { setSavingNotif(false); }
   };
 

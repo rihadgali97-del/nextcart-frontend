@@ -8,6 +8,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 
 // Import your new logo image asset
 import gebeyaPlusLogo from '../../assets/gebeya-logo.png'; 
+import { toast } from '../../services/toast';
 
 const AdminSidebar = ({ isCollapsed, setIsCollapsed }) => {
   const navigate = useNavigate();
@@ -24,8 +25,10 @@ const AdminSidebar = ({ isCollapsed, setIsCollapsed }) => {
     { icon: <Settings size={20} />, label: 'System Settings', path: '/admin/settings' }, 
   ];
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    if (!await toast.confirm('Are you sure you want to log out?', 'Log out')) return;
     localStorage.clear();
+    toast.success('You have been logged out.');
     navigate('/login');
   };
 

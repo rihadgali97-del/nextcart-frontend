@@ -44,6 +44,7 @@ import PaymentSuccess  from './pages/payment/PaymentSuccess';
 
 // Messaging
 import Messages from './pages/vendor/Messages';
+import ToastViewport from './components/common/ToastViewport';
 
 const ProtectedRoute = ({ children, allowedRole }) => {
   const token = localStorage.getItem('token');
@@ -104,6 +105,7 @@ function App() {
   return (
     <GoogleOAuthProvider clientId={googleClientId}>
       <Router>
+        <ToastViewport />
         <Routes>
           {/* Public Routes */}
           <Route path="/login"    element={<Login />} />

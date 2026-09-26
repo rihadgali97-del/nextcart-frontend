@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { executeTrustWeightedSearch } from '../services/api';
+import { toast } from '../services/toast';
 import ProductCard from './ui/ProductCard';
 import { Search, MapPin, Navigation, Layers } from 'lucide-react';
 
@@ -46,7 +47,7 @@ const ProximitySearch = () => {
     }
 
     if (!navigator.geolocation) {
-      alert("Geolocation is not supported by your browser.");
+      toast.error("Geolocation is not supported by your browser.");
       return;
     }
 
@@ -59,7 +60,7 @@ const ProximitySearch = () => {
         setCoords(newCoords);
         updateUrlParams(newCoords);
       },
-      () => alert("Location access denied. Using standard search fallback.")
+      () => toast.error("Location access denied. Using standard search fallback.")
     );
   };
 

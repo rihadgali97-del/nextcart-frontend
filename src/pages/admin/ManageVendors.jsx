@@ -7,6 +7,7 @@ import {
 import { getVendors, updateVendorStatus, deleteVendor } from '../../services/api';
 import { downloadVendorAudit } from '../../services/reportService'; // New Service
 import { saveAs } from 'file-saver';
+import { toast } from '../../services/toast';
 
 const ManageVendors = () => {
   const [vendors, setVendors] = useState([]);
@@ -47,13 +48,13 @@ const ManageVendors = () => {
   }, [searchTerm, activeTab, vendors]);
 
   const exportCSV = () => {
-    if (filteredVendors.length === 0) return alert("No data to export");
+    if (filteredVendors.length === 0) return toast.info("No data to export");
     const headers = "ID,Business Name,Owner,Email,Status\n";
     const rows = filteredVendors.map(v => 
       `${v._id},"${v.businessName}","${v.user?.name || 'N/A'}","${v.user?.email || 'N/A'}",${v.status}`
     ).join("\n");
     const blob = new Blob([headers + rows], { type: 'text/csv;charset=utf-8;' });
-    saveAs(blob, `NextCart_Vendors_${new Date().toISOString().split('T')[0]}.csv`);
+    saveAs(blob, `GebeyaPlus_Vendors_${new Date().toISOString().split('T')[0]}.csv`);
   };
 
   // --- NEW PROFESSIONAL BACKEND PDF CALL ---
@@ -64,7 +65,7 @@ const ManageVendors = () => {
       await downloadVendorAudit();
     } catch (error) {
       console.error("PDF Generation Error:", error);
-      alert("Unauthorized or Server Error. Ensure you are logged in as Admin.");
+      toast.error("Unauthorized or server error. Ensure you are logged in as admin.");
     }
   };
 
@@ -74,17 +75,17 @@ const ManageVendors = () => {
       await updateVendorStatus(id, newStatus);
       setVendors(prev => prev.map(v => v._id === id ? { ...v, status: newStatus } : v));
     } catch (err) {
-      alert("Failed to update status.");
+      toast.error("Failed to update status.");
     }
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm("CRITICAL ACTION: Revoke all business permissions?")) {
+    if (await toast.confirm("Revoke all business permissions?", "Revoke")) {
       try {
         await deleteVendor(id);
         fetchVendors();
       } catch (err) {
-        alert("Deletion failed.");
+        toast.error("Deletion failed.");
       }
     }
   };
@@ -242,7 +243,7 @@ const ManageVendors = () => {
         <p className="text-xs font-bold uppercase tracking-widest">Total Partners: {vendors.length}</p>
         <div className="flex items-center gap-2 text-xs">
           <AlertCircle size={14} />
-          <span>Session encrypted via NextCart Pro Security Layer</span>
+          <span>Session encrypted via GebeyaPlus Pro Security Layer</span>
         </div>
       </footer>
     </div>

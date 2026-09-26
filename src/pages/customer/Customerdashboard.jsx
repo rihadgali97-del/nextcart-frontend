@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { io } from "socket.io-client";
 import gebeyaPlusLogo from "../../assets/gebeya-logo.png";
 import API, { getUserProfile, updateProfile, changePassword, getCategories, getConversations } from "../../services/api";
+import { toast as appToast } from "../../services/toast";
 
 import { C, NAV, notifStyle, avatarColor, PRODUCTS_PER_PAGE } from "./constants";
 import { notifAPI, fmt, ago, fmtDate, toast, registerToast } from "./helpers";
@@ -51,14 +52,13 @@ export default function CustomerDashboard() {
   const isWishlisted = (id) => wishlist.some(p=>p._id===id);
 
   // ── Confirm + logout ────────────────────────────────────────────────────────
-  const [confirm, setConfirm] = useState(null);
-  const handleLogout = () => {
-    setConfirm({ message:"Are you sure you want to log out?", onConfirm:() => {
-      localStorage.removeItem("token");
-      localStorage.removeItem("user");
-      localStorage.removeItem("nc_wishlist");
-      navigate("/login");
-    }});
+  const handleLogout = async () => {
+    if (!await appToast.confirm("Are you sure you want to log out?", "Log out")) return;
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    localStorage.removeItem("nc_wishlist");
+    appToast.success("You have been logged out.");
+    navigate("/login");
   };
 
   // ── Toast ───────────────────────────────────────────────────────────────────
@@ -232,7 +232,7 @@ export default function CustomerDashboard() {
   };
   const updateCartQty = async(productId,quantity)=>{ if(quantity<1) return removeFromCart(productId); try{ await API.post("/cart",{product:productId,productId,quantity}); await loadCart(); }catch{ toast.error("Failed to update cart"); } };
   const removeFromCart = async(productId)=>{ try{ await API.delete(`/cart/${productId}`); await loadCart(); toast.success("Removed from cart"); }catch{ toast.error("Failed to remove item"); } };
-  const clearCartFn    = async()=>{ if(!window.confirm("Clear the entire cart?")) return; try{ await API.delete("/cart"); setCart([]); toast.success("Cart cleared"); }catch{} };
+  const clearCartFn    = async()=>{ if(!await appToast.confirm("Clear the entire cart?", "Clear cart")) return; try{ await API.delete("/cart"); setCart([]); toast.success("Cart cleared"); }catch{ toast.error("Failed to clear cart"); } };
 
   const handleCheckout = async (shippingForm, discountedTotal, appliedCoupon) => {
     if (cart.length===0){ toast.error("Cart is empty"); return; }
@@ -247,11 +247,21 @@ export default function CustomerDashboard() {
       const orderId=data.order?._id, paymentInfo=data.paymentInfo, method=shippingForm.paymentMethod;
       if(method==="cash"){ try{await API.delete("/cart");}catch{} setCart([]); toast.success("Order placed! Pay on delivery."); await loadOrders(); setSection("orders"); return; }
       localStorage.setItem("pending_order_id",orderId||"");
-      try{await API.delete("/cart");}catch{} setCart([]);
+      if(method!=="chapa"){
+        try{await API.delete("/cart");}catch{} setCart([]);
+      }
       if(method==="telebirr"||method==="cbe"){
         const url=paymentInfo?.url||paymentInfo?.toPayUrl;
         if(url&&!url.startsWith("/")) localStorage.setItem("telebirr_redirect_url",url);
         navigate(`/telebirr-pay?orderId=${orderId}&amount=${discountedTotal.toFixed(2)}${(!url||url.startsWith("/"))?"&mock=true":""}`);
+        return;
+      }
+      if(method==="chapa"){
+        const chapaUrl=paymentInfo?.url;
+        if(!chapaUrl) throw new Error("Chapa checkout URL was not returned.");
+        localStorage.setItem("pending_payment_method","chapa");
+        localStorage.setItem("pending_payment_reference",paymentInfo.tx_ref||"");
+        window.location.href=chapaUrl;
         return;
       }
       if(method==="stripe"){ const su=paymentInfo?.checkout_url||paymentInfo?.url; if(su){setTimeout(()=>window.location.href=su,600);return;} }
@@ -322,7 +332,7 @@ export default function CustomerDashboard() {
             </div>
             {!collapsed&&(
               <div style={{overflow:"hidden"}}>
-                <div style={{fontSize:15,fontWeight:900,color:"#fff",whiteSpace:"nowrap",letterSpacing:"-.2px"}}>Next<span style={{color:C.gold}}>Cart</span></div>
+                <div style={{fontSize:15,fontWeight:900,color:"#fff",whiteSpace:"nowrap",letterSpacing:"-.2px"}}>GebeyaPlus</div>
                 <div style={{fontSize:9,color:"rgba(255,255,255,.4)",whiteSpace:"nowrap",textTransform:"uppercase",letterSpacing:".15em",fontWeight:700}}>Customer Portal</div>
               </div>
             )}
@@ -503,20 +513,6 @@ export default function CustomerDashboard() {
       </div>
 
       {/* Confirm dialog */}
-      {confirm&&(
-        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.45)",zIndex:9998,display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
-          <div style={{background:"#fff",borderRadius:14,padding:"28px 32px",maxWidth:380,width:"100%",boxShadow:"0 8px 40px rgba(0,0,0,.18)",textAlign:"center"}}>
-            <div style={{fontSize:36,marginBottom:12}}>🚪</div>
-            <div style={{fontSize:16,fontWeight:700,color:C.text,marginBottom:8}}>{confirm.message}</div>
-            <div style={{fontSize:13,color:C.muted,marginBottom:24}}>This action cannot be undone.</div>
-            <div style={{display:"flex",gap:10,justifyContent:"center"}}>
-              <button onClick={()=>setConfirm(null)} style={{flex:1,padding:"10px 0",borderRadius:9,fontSize:13,fontWeight:600,border:`1px solid ${C.border}`,background:"#fff",color:C.text,cursor:"pointer"}}>Cancel</button>
-              <button onClick={()=>{confirm.onConfirm();setConfirm(null);}} style={{flex:1,padding:"10px 0",borderRadius:9,fontSize:13,fontWeight:600,border:"none",background:C.red,color:"#fff",cursor:"pointer"}}>Yes, Log Out</button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Toast */}
       {toastState&&(
         <div style={{position:"fixed",bottom:24,right:24,zIndex:9999,background:toastState.type==="error"?C.red:toastState.type==="info"?C.blue:C.green,color:"#fff",padding:"12px 20px",borderRadius:10,fontSize:13,fontWeight:500,boxShadow:"0 4px 24px rgba(0,0,0,.18)",display:"flex",alignItems:"center",gap:8,maxWidth:320}}>

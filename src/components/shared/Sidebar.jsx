@@ -4,6 +4,7 @@ import {
   Users, ShieldCheck, ClipboardList, LogOut, Store 
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { toast } from '../../services/toast';
 
 const Sidebar = () => {
   const [user, setUser] = useState(null);
@@ -42,8 +43,10 @@ const Sidebar = () => {
   // 2. Select the correct list based on the user's role (fallback to customer)
   const currentMenuItems = user ? menuConfig[user.role] : menuConfig.customer;
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    if (!await toast.confirm('Are you sure you want to log out?', 'Log out')) return;
     localStorage.clear();
+    toast.success('You have been logged out.');
     navigate('/login');
   };
 

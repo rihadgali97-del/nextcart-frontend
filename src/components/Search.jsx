@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { searchProducts } from '../services/api';
+import { toast } from '../services/toast';
 import ProductCard from './ui/ProductCard';
 import { Search, MapPin, Layers } from 'lucide-react';
 
@@ -125,7 +126,7 @@ const SearchComponent = () => {
     }
 
     if (!navigator?.geolocation) {
-      alert('Geolocation not supported by this browser');
+      toast.error('Geolocation not supported by this browser');
       return;
     }
 
@@ -137,7 +138,7 @@ const SearchComponent = () => {
       },
       (err) => {
         console.warn('Geolocation denied or failed', err);
-        alert('Unable to access location. You can still search without proximity.');
+        toast.error('Unable to access location. You can still search without proximity.');
       },
       { enableHighAccuracy: true, maximumAge: 5 * 60 * 1000 }
     );

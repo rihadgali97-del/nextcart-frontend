@@ -4,6 +4,7 @@ import { Eye, EyeOff } from 'lucide-react';
 import { GoogleLogin } from '@react-oauth/google';
 import { googleAuth, registerUser } from '../../services/api';
 import Logo from '../../components/common/Logo';
+import { toast } from '../../services/toast';
 import '../../styles/auth/register.css';
 
 const Register = () => {
@@ -101,7 +102,7 @@ const Register = () => {
 
     try {
       await registerUser(payload);
-      alert("Account created! Please check your email to verify.");
+      toast.success("Account created! Please check your email to verify.");
       navigate('/login');
     } catch (err) {
       setError(getAuthErrorMessage(err, "Registration failed."));
