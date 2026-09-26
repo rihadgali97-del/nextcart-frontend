@@ -25,10 +25,10 @@ import { ActionBtn, Pagination, SettingRow } from "./AdminDashboardControls";
 // ─── Tiny helpers ─────────────────────────────────────────────────────────────
 const fmt = (n) =>
   n >= 1_000_000
-    ? `$${(n / 1_000_000).toFixed(1)}M`
+    ? `ETB ${(n / 1_000_000).toFixed(1)}M`
     : n >= 1_000
-    ? `$${(n / 1_000).toFixed(1)}k`
-    : `$${Number(n || 0).toFixed(0)}`;
+    ? `ETB ${(n / 1_000).toFixed(1)}k`
+    : `ETB ${Number(n || 0).toFixed(0)}`;
 
 const fmtNum = (n) => Number(n || 0).toLocaleString();
 
@@ -718,7 +718,7 @@ const loadProducts = useCallback(async () => {
     { key: "_id",        label: "Order ID",  csvValue: (r) => r._id?.slice(-6).toUpperCase() },
     { key: "customer",   label: "Customer",  csvValue: (r) => r.user?.name || "Unknown" },
     { key: "email",      label: "Email",     csvValue: (r) => r.user?.email || "" },
-    { key: "totalPrice", label: "Total",     csvValue: (r) => `$${Number(r.totalPrice).toFixed(2)}` },
+{ key: "totalPrice", label: "Total",     csvValue: (r) => `ETB ${Number(r.totalPrice).toFixed(2)}` },
     { key: "status",     label: "Status",    csvValue: (r) => r.status },
     { key: "isPaid",     label: "Payment",   csvValue: (r) => r.isPaid ? "Paid" : "Unpaid" },
     { key: "createdAt",  label: "Date",      csvValue: (r) => new Date(r.createdAt).toLocaleDateString() },
@@ -836,15 +836,35 @@ const loadProducts = useCallback(async () => {
       <Table loading={loading.products}
         cols={[
           { key: "name", label: "Product", render: (r) => (
-            <div>
-              <div style={{ fontWeight: 500, maxWidth: 200, overflow: "hidden",
-                textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.name}</div>
-              <div style={{ fontSize: 11, color: "#7a8c7e" }}>{r.category?.name}</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              {r.image ? (
+                <img src={r.image} alt="" style={{ width: 38, height: 38, borderRadius: 10, objectFit: "cover", flexShrink: 0 }} />
+              ) : (
+                <div style={{ width: 38, height: 38, borderRadius: 10, background: "#f1f5f1", color: "#7a8c7e", display: "grid", placeItems: "center", fontWeight: 700, flexShrink: 0 }}>
+                  {r.name?.charAt(0)?.toUpperCase() || "P"}
+                </div>
+              )}
+              <div>
+                <div style={{ fontWeight: 500, maxWidth: 200, overflow: "hidden",
+                  textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.name}</div>
+                <div style={{ fontSize: 11, color: "#7a8c7e" }}>{r.category?.name}</div>
+              </div>
             </div>
           )},
           { key: "_id",      label: "ID",     render: (r) => <span style={{ fontFamily: "monospace", fontSize: 10, color: "#7a8c7e" }}>{r._id?.slice(-8)}</span> },
-          { key: "vendor",   label: "Vendor", render: (r) => r.vendor?.businessName || "—" },
-          { key: "price",    label: "Price",  render: (r) => `$${Number(r.price).toFixed(2)}` },
+          { key: "vendor",   label: "Vendor", render: (r) => (
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              {r.vendor?.logo ? (
+                <img src={r.vendor.logo} alt="" style={{ width: 28, height: 28, borderRadius: "50%", objectFit: "cover" }} />
+              ) : r.vendor?.businessName ? (
+                <span style={{ width: 28, height: 28, borderRadius: "50%", background: "#f5f1e5", color: "#9a7b2f", display: "grid", placeItems: "center", fontSize: 11, fontWeight: 700 }}>
+                  {r.vendor.businessName.charAt(0).toUpperCase()}
+                </span>
+              ) : null}
+              <span>{r.vendor?.businessName || "—"}</span>
+            </div>
+          )},
+{ key: "price",    label: "Price",  render: (r) => `ETB ${Number(r.price).toFixed(2)}` },
           { key: "stock",    label: "Stock",  render: (r) => (
             <span style={{ color: r.stock < 10 ? "#D85A30" : "#1a2b1f", fontWeight: r.stock < 10 ? 600 : 400 }}>
               {r.stock < 10 ? `⚠ ${r.stock}` : r.stock}

@@ -76,11 +76,11 @@ export default function CustomerNearby({
             <option value="">All Categories</option>
             {categories.map(c=><option key={c._id} value={c._id}>{c.name}</option>)}
           </select>
-          <input type="number" placeholder="Min $" value={nearbyMinPrice}
+          <input type="number" placeholder="Min ETB" value={nearbyMinPrice}
             onChange={e=>{setNearbyMinPrice(e.target.value);setNearbyPage(1);}}
             style={{width:80,padding:"9px 10px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:13,outline:"none"}}/>
           <span style={{color:C.muted}}>—</span>
-          <input type="number" placeholder="Max $" value={nearbyMaxPrice}
+          <input type="number" placeholder="Max ETB" value={nearbyMaxPrice}
             onChange={e=>{setNearbyMaxPrice(e.target.value);setNearbyPage(1);}}
             style={{width:80,padding:"9px 10px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:13,outline:"none"}}/>
           {nearbyLocStatus==="granted" && (

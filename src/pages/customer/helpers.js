@@ -8,9 +8,9 @@ export const notifAPI = {
 };
 
 export const fmt = (n) =>
-  n >= 1_000_000 ? `$${(n/1_000_000).toFixed(1)}M`
-  : n >= 1_000   ? `$${(n/1_000).toFixed(1)}k`
-  : `$${Number(n||0).toFixed(2)}`;
+  n >= 1_000_000 ? `ETB ${(n/1_000_000).toFixed(1)}M`
+  : n >= 1_000   ? `ETB ${(n/1_000).toFixed(1)}k`
+  : `ETB ${Number(n||0).toFixed(2)}`;
 
 export const ago = (d) => {
   const s = Math.floor((Date.now() - new Date(d)) / 1000);

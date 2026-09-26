@@ -14,7 +14,7 @@ const ManageProducts = () => {
   const fetchProducts = async () => {
     try {
       const { data } = await getAdminProducts();
-      setProducts(data.products); 
+      setProducts(data.products || data.data || []); 
     } catch (err) {
       console.error("Fetch error", err);
     } finally {
@@ -106,7 +106,16 @@ const ManageProducts = () => {
                     </div>
                   </td>
                   <td className="px-8 py-5 text-sm font-medium text-slate-600">
-                    {product.vendor?.businessName || 'GebeyaPlus Official'}
+                    <div className="flex items-center gap-2">
+                      {product.vendor?.logo ? (
+                        <img src={product.vendor.logo} alt="" className="h-8 w-8 rounded-full object-cover" />
+                      ) : product.vendor?.businessName ? (
+                        <span className="grid h-8 w-8 place-items-center rounded-full bg-[#f5f1e5] text-xs font-bold text-[#9a7b2f]">
+                          {product.vendor.businessName.charAt(0).toUpperCase()}
+                        </span>
+                      ) : null}
+                      <span>{product.vendor?.businessName || 'GebeyaPlus Official'}</span>
+                    </div>
                   </td>
                   <td className="px-8 py-5 font-bold text-[#0f2a29]">
                     ${product.price.toFixed(2)}

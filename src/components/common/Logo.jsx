@@ -18,7 +18,7 @@ const Logo = ({ className = "h-10", showText = true, lightText = false }) => {
       {/* Dynamic typography rendering Gebeya+ */}
       {showText && (
         <span className={`brand-logo__text ${lightText ? 'brand-logo__text--light' : ''}`}>
-          Gebeya<span className="brand-logo__accent">+</span>
+          Gebeya<span className="brand-logo__accent">Pus</span>
         </span>
       )}
     </div>

@@ -57,7 +57,7 @@ export default function CouponInput({ orderAmount, vendorId, onApply, onRemove }
             {applied.code} applied
           </div>
           <div style={{ fontSize:11, color:"#3B6D11", opacity:.8, marginTop:1 }}>
-            {applied.description || `You save $${applied.discount.toFixed(2)}`}
+              {applied.description || `You save ETB ${applied.discount.toFixed(2)}`}
           </div>
         </div>
       </div>

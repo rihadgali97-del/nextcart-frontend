@@ -185,7 +185,7 @@ const SystemSettings = () => {
                   <div className="p-6 bg-slate-50 rounded-3xl space-y-4">
                     <label className="text-[10px] font-black uppercase text-[#c4a456] tracking-tighter">Commission Structure</label>
                     <div className="flex items-center gap-4">
-                      <div className="text-2xl font-black text-[#0f2a29]">$</div>
+                      <div className="text-2xl font-black text-[#0f2a29]">ETB</div>
                       <input type="number" value={adminConfig.commissionRate}
                         onChange={(e) => setAdminConfig({...adminConfig, commissionRate: e.target.value})}
                         className="w-full bg-transparent text-3xl font-black outline-none"
